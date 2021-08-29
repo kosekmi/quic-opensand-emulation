@@ -220,8 +220,10 @@ function _osnd_generate_scenarios() {
 				for tbs in "${transfer_buffer_sizes[@]}"; do
 					for qbs in "${quicly_buffer_sizes[@]}"; do
 						for ubs in "${udp_buffer_sizes[@]}"; do
-							local scenario_options="-O ${orbit} -A ${attenuation} -C ${ccs} -B ${tbs} -Q ${qbs} -U ${ubs}"
-							echo "$common_options $scenario_options" >>"$scenario_file"
+							for delay in "${delays[@]}"; do
+								local scenario_options="-O ${orbit} -A ${attenuation} -C ${ccs} -B ${tbs} -Q ${qbs} -U ${ubs} -E ${delay}"
+								echo "$common_options $scenario_options" >>"$scenario_file"
+							done
 						done
 					done
 				done
@@ -240,7 +242,7 @@ function _osnd_read_scenario() {
 	local -n config_ref="$1"
 	local scenario="$2"
 
-	local parsed_scenario_args=$(getopt -n "opensand scenario" -o "A:B:C:D:M:N:O:P:Q:T:U:VWXYZ" -l "attenuation:,transport-buffers:,congestion-control:,dump:,modulation:,runs:,orbits:,prime:,quicly-buffers:,timing-runs:,udp-buffers:,disable-plain,disable-pep,disable-ping,disable-quic,disable-tcp" -- $scenario)
+	local parsed_scenario_args=$(getopt -n "opensand scenario" -o "A:B:C:D:E:M:N:O:P:Q:T:U:VWXYZ" -l "attenuation:,transport-buffers:,congestion-control:,dump:,modulation:,runs:,orbits:,prime:,quicly-buffers:,timing-runs:,udp-buffers:,disable-plain,disable-pep,disable-ping,disable-quic,disable-tcp,delay" -- $scenario)
 	local parsing_status=$?
 	if [ "$parsing_status" != "0" ]; then
 		return 1
@@ -294,6 +296,10 @@ function _osnd_read_scenario() {
 			config_ref['ubs']="$2"
 			shift 2
 			;;
+		-E | --delay)
+			config_ref['delay']="$2"
+			shift 2
+			;;
 		-V | --disable-plain)
 			config_ref['exec_plain']="false"
 			shift 1
@@ -310,7 +316,7 @@ function _osnd_read_scenario() {
 			config_ref['exec_quic']="false"
 			shift 1
 			;;
-		-Z | --dsiable-tcp)
+		-Z | --disable-tcp)
 			config_ref['exec_tcp']="false"
 			shift 1
 			;;
@@ -427,6 +433,7 @@ function _osnd_run_scenarios() {
 		scenario_config['tbs']="1M,1M"
 		scenario_config['qbs']="1M,1M,1M,1M"
 		scenario_config['ubs']="1M,1M,1M,1M"
+		scenario_config['delay']="125,125,125"
 
 		_osnd_read_scenario scenario_config "$scenario"
 		local read_status=$?
@@ -461,6 +468,12 @@ function _osnd_run_scenarios() {
 		scenario_config['ubs_gw']="${ubuf_sizes[1]}"
 		scenario_config['ubs_st']="${ubuf_sizes[2]}"
 		scenario_config['ubs_cl']="${ubuf_sizes[3]}"
+
+		local -a delays=()
+		IFS=',' read -ra delays <<<"${scenario_config['delay']}"
+		scenario_config['delay_sat']="${delays[0]}"
+		scenario_config['delay_gw']="${delays[1]}"
+		scenario_config['delay_st']="${delays[2]}"
 
 		# Execute scenario
 		echo "${scenario_config['id']} $scenario" >>"${EMULATION_DIR}/scenarios.txt"
@@ -530,8 +543,9 @@ function _osnd_parse_args() {
 	local -a new_transfer_buffer_sizes=()
 	local -a new_quicly_buffer_sizes=()
 	local -a new_udp_buffer_sizes=()
+	local -a new_delays=()
 	local measure_cli_args="false"
-	while getopts ":f:hst:vA:B:C:D:N:O:P:Q:T:U:VWXYZ" opt; do
+	while getopts ":f:hst:vA:B:C:D:E:N:O:P:Q:T:U:VWXYZ" opt; do
 		if [[ "${opt^^}" == "$opt" ]]; then
 			measure_cli_args="true"
 			if [[ "$scenario_file" != "" ]]; then
@@ -595,6 +609,38 @@ function _osnd_parse_args() {
 				echo "Invalid integer value for -D"
 				exit 1
 			fi
+			;;
+		E)
+			IFS=',' read -ra delay_values <<<"$OPTARG"
+			if [[ "${#delay_values[@]}" != 3 ]]; then
+				echo "Need exactly three delay values, ${#delay_values[@]} given in '${delay_values[@]}'"
+				exit 1
+			else
+				for delay in "${delay_values[@]}"; do
+					IFS=';' read -ra procDelays <<< "${delay}"
+					if [[ "${#procDelays[@]}" == 1 ]]; then
+						if ! [[ "${procDelays[0]}" =~ ^[0-9]+$ ]]; then
+							echo "Invalid integer value for -E"
+							exit 1
+						fi
+					else
+						for delayFileLine in "${procDelays[@]}"; do
+							IFS='-' read -ra procDelayFileLine <<< "${delayFileLine}"
+							if [[ "${#procDelayFileLine[@]}" != 2 ]]; then
+								echo "Invalid integer value for -E"
+								exit 1
+							fi
+							for procDelayFileLine in "${procDelayFileLine[@]}"; do
+								if ! [[ "${procDelayFileLine}" =~ ^[0-9]+$ ]]; then
+									echo "Invalid integer value for -E"
+									exit 1
+								fi
+							done
+						done
+					fi
+				done
+			fi
+			new_delays+=("$OPTARG")
 			;;
 		N)
 			if [[ "$OPTARG" =~ ^[0-9]+$ ]]; then
@@ -676,6 +722,9 @@ function _osnd_parse_args() {
 	if [[ "${#new_udp_buffer_sizes[@]}" > 0 ]]; then
 		udp_buffer_sizes=("${new_udp_buffer_sizes[@]}")
 	fi
+	if [[ "${#new_delays[@]}" > 0 ]]; then
+		delays=("${new_delays[@]}")
+	fi
 }
 
 function _main() {
@@ -685,6 +734,7 @@ function _main() {
 	declare -a transfer_buffer_sizes=("1M,1M")
 	declare -a quicly_buffer_sizes=("1M,1M,1M,1M")
 	declare -a udp_buffer_sizes=("1M,1M,1M,1M")
+	declare -a delays=("125,125,125")
 
 	_osnd_parse_args "$@"
 

@@ -1,17 +1,5 @@
 #!/bin/bash
 
-# _osnd_orbit_sat_delay(orbit)
-function _osnd_orbit_sat_delay() {
-	local orbit="$1"
-
-	case "$orbit" in
-	"GEO") echo 125 ;;
-	"MEO") echo 55 ;;
-	"LEO") echo 18 ;;
-	*) echo 0 ;;
-	esac
-}
-
 # _osnd_orbit_ground_delay(orbit)
 function _osnd_orbit_ground_delay() {
 	local orbit="$1"
@@ -107,15 +95,17 @@ function osnd_setup() {
 	local modulation_id="${scenario_config_ref['modulation_id']:-1}"
 	local dump="${scenario_config_ref['dump']:-0}"
 
-	local delay_sat="$(_osnd_orbit_sat_delay "$orbit")"
 	local delay_ground="$(_osnd_orbit_ground_delay "$orbit")"
+	local delay_sat="${scenario_config_ref['delay_sat']:-125}"
+	local delay_gw="${scenario_config_ref['delay_gw']:-125}"
+	local delay_st="${scenario_config_ref['delay_st']:-125}"
 
 	log I "Setting up emulation environment"
 
 	osnd_setup_namespaces "$delay_ground"
 	_osnd_configure_cc "$cc_cl" "$cc_st" "$cc_emu" "$cc_gw" "$cc_sv"
 	sleep 1
-	osnd_setup_opensand "$delay_sat" "$attenuation" "$modulation_id"
+	osnd_setup_opensand "$delay_sat" "$delay_gw" "$delay_st" "$attenuation" "$modulation_id"
 	sleep 1
 	if (($(echo "$prime > 0" | bc -l))); then
 		_osnd_prime_env $prime
