@@ -1,13 +1,12 @@
 #!/bin/bash
 
-# _osnd_configure_opensand_delay(delay_sat, delay_gw, delay_st)
+# _osnd_configure_opensand_delay(delay_gw, delay_st)
 # Configures a constant delay.
 function _osnd_configure_opensand_delay() {
-	local delay_sat="$1"
-	local delay_gw="$2"
-	local delay_st="$3"
+	local delay_gw="$1"
+	local delay_st="$2"
 
-	for entity in sat gw st; do
+	for entity in gw st; do
 		local delayName="delay_${entity}"
 		local delay="${!delayName}"
 		local -a procDelays=()
@@ -23,9 +22,13 @@ function _osnd_configure_opensand_delay() {
 
 				if [ "${firstLineLength}" -le 1 ]; then
 					xmlstarlet edit -L \
-						--update "/configuration/common/global_constant_delay" --value "true" \
-						--update "/configuration/common/delay" --value "$delay" \
+						--update "/configuration/common/global_constant_delay" --value "false" \
+						--update "/configuration/delay/delay_type" --value "ConstantDelay" \
 						"${OSND_TMP}/config_${entity}/core_global.conf"
+
+					xmlstarlet edit -L \
+						--update "/configuration/delay_conf/delay" --value "${delay}" \
+						"${OSND_TMP}/config_${entity}/plugins/constant_delay.conf"
 				fi
 			else
 
@@ -117,11 +120,10 @@ function _osnd_configure_opensand_carriers() {
 
 # osnd_setup_opensand(delay, attenuation, modulation_id)
 function osnd_setup_opensand() {
-	local delay_sat="${1:--1}"
-	local delay_gw="${2:--1}"
-	local delay_st="${3:--1}"
-	local attenuation="${4:--1}"
-	local modulation_id="${5:-1}"
+	local delay_gw="${1:--1}"
+	local delay_st="${2:--1}"
+	local attenuation="${3:--1}"
+	local modulation_id="${4:-1}"
 
 	# Copy configurations
 	for entity in sat gw st; do
@@ -136,7 +138,7 @@ function osnd_setup_opensand() {
 	done
 
 	# Modify configuration based on parameter
-	_osnd_configure_opensand_delay "$delay_sat" "$delay_gw" "$delay_st"
+	_osnd_configure_opensand_delay "$delay_gw" "$delay_st"
 	_osnd_configure_opensand_attenuation "$attenuation"
 	_osnd_configure_opensand_min_condition
 	_osnd_configure_opensand_carriers "$modulation_id"

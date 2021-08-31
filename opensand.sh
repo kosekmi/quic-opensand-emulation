@@ -433,7 +433,7 @@ function _osnd_run_scenarios() {
 		scenario_config['tbs']="1M,1M"
 		scenario_config['qbs']="1M,1M,1M,1M"
 		scenario_config['ubs']="1M,1M,1M,1M"
-		scenario_config['delay']="125,125,125"
+		scenario_config['delay']="125,125"
 
 		_osnd_read_scenario scenario_config "$scenario"
 		local read_status=$?
@@ -471,9 +471,8 @@ function _osnd_run_scenarios() {
 
 		local -a delays=()
 		IFS=',' read -ra delays <<<"${scenario_config['delay']}"
-		scenario_config['delay_sat']="${delays[0]}"
-		scenario_config['delay_gw']="${delays[1]}"
-		scenario_config['delay_st']="${delays[2]}"
+		scenario_config['delay_gw']="${delays[0]}"
+		scenario_config['delay_st']="${delays[1]}"
 
 		# Execute scenario
 		echo "${scenario_config['id']} $scenario" >>"${EMULATION_DIR}/scenarios.txt"
@@ -612,8 +611,8 @@ function _osnd_parse_args() {
 			;;
 		E)
 			IFS=',' read -ra delay_values <<<"$OPTARG"
-			if [[ "${#delay_values[@]}" != 3 ]]; then
-				echo "Need exactly three delay values, ${#delay_values[@]} given in '${delay_values[@]}'"
+			if [[ "${#delay_values[@]}" != 2 ]]; then
+				echo "Need exactly two delay values, ${#delay_values[@]} given in '${delay_values[@]}'"
 				exit 1
 			else
 				for delay in "${delay_values[@]}"; do
@@ -734,7 +733,7 @@ function _main() {
 	declare -a transfer_buffer_sizes=("1M,1M")
 	declare -a quicly_buffer_sizes=("1M,1M,1M,1M")
 	declare -a udp_buffer_sizes=("1M,1M,1M,1M")
-	declare -a delays=("125,125,125")
+	declare -a delays=("125,125")
 
 	_osnd_parse_args "$@"
 
