@@ -73,6 +73,8 @@ function _osnd_setup_add_namespaces() {
 
 	sudo ip netns exec osnd-st ip link set tap-st master br-st
 	sudo ip netns exec osnd-gw ip link set tap-gw master br-gw
+
+	# Set packet loss for link
 }
 
 # _osnd_setup_ip_config()
@@ -148,14 +150,25 @@ function _osnd_setup_ground_delay() {
 	fi
 }
 
+function _osnd_setup_packet_loss() {
+	local packet_loss="$1"
+
+	log D "Configuring packet loss"
+	if [ "$packet_loss" -ne "0" ]; then
+		sudo ip netns exec osnd-emu tc qdisc add dev emu1l root netem loss ${packet_loss}%
+	fi
+}
+
 # osnd_setup_namespaces(delay)
 # Create the namespaces and all links within them for the emulation setup.
 function osnd_setup_namespaces() {
 	local delay="${1:-0}"
+	local packet_loss="${2:-0}"
 
 	_osnd_setup_add_namespaces
 	_osnd_setup_ip_config
 	_osnd_setup_ground_delay "$delay"
+	_osnd_setup_packet_loss "$packet_loss"
 }
 
 # If script is executed directly

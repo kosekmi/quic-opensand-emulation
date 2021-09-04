@@ -221,8 +221,10 @@ function _osnd_generate_scenarios() {
 					for qbs in "${quicly_buffer_sizes[@]}"; do
 						for ubs in "${udp_buffer_sizes[@]}"; do
 							for delay in "${delays[@]}"; do
-								local scenario_options="-O ${orbit} -A ${attenuation} -C ${ccs} -B ${tbs} -Q ${qbs} -U ${ubs} -E ${delay}"
-								echo "$common_options $scenario_options" >>"$scenario_file"
+								for loss in "${packet_losses[@]}"; do
+									local scenario_options="-O ${orbit} -A ${attenuation} -C ${ccs} -B ${tbs} -Q ${qbs} -U ${ubs} -E ${delay} -L ${loss}"
+									echo "$common_options $scenario_options" >>"$scenario_file"
+								done
 							done
 						done
 					done
@@ -242,7 +244,7 @@ function _osnd_read_scenario() {
 	local -n config_ref="$1"
 	local scenario="$2"
 
-	local parsed_scenario_args=$(getopt -n "opensand scenario" -o "A:B:C:D:E:M:N:O:P:Q:T:U:VWXYZ" -l "attenuation:,transport-buffers:,congestion-control:,dump:,modulation:,runs:,orbits:,prime:,quicly-buffers:,timing-runs:,udp-buffers:,disable-plain,disable-pep,disable-ping,disable-quic,disable-tcp,delay" -- $scenario)
+	local parsed_scenario_args=$(getopt -n "opensand scenario" -o "A:B:C:D:E:M:N:L:O:P:Q:T:U:VWXYZ" -l "attenuation:,transport-buffers:,congestion-control:,dump:,modulation:,runs:,orbits:,prime:,quicly-buffers:,timing-runs:,udp-buffers:,disable-plain,disable-pep,disable-ping,disable-quic,disable-tcp,delay,loss" -- $scenario)
 	local parsing_status=$?
 	if [ "$parsing_status" != "0" ]; then
 		return 1
@@ -268,12 +270,20 @@ function _osnd_read_scenario() {
 			config_ref['dump']="$2"
 			shift 2
 			;;
+		-E | --delay)
+			config_ref['delay']="$2"
+			shift 2
+			;;
 		-M | --modulation)
 			config_ref['modulation_id']="$2"
 			shift 2
 			;;
 		-N | --runs)
 			config_ref['runs']="$2"
+			shift 2
+			;;
+		-L | --loss)
+			config_ref['loss']="$2"
 			shift 2
 			;;
 		-O | --orbit)
@@ -294,10 +304,6 @@ function _osnd_read_scenario() {
 			;;
 		-U | --udp-buffers)
 			config_ref['ubs']="$2"
-			shift 2
-			;;
-		-E | --delay)
-			config_ref['delay']="$2"
 			shift 2
 			;;
 		-V | --disable-plain)
@@ -434,6 +440,7 @@ function _osnd_run_scenarios() {
 		scenario_config['qbs']="1M,1M,1M,1M"
 		scenario_config['ubs']="1M,1M,1M,1M"
 		scenario_config['delay']="125,125"
+		scenario_config['loss']=0
 
 		_osnd_read_scenario scenario_config "$scenario"
 		local read_status=$?
@@ -499,6 +506,8 @@ Scenario configuration:
   -B <#,>*   csl of two qperf transfer buffer sizes for G and T (default: 1M)
   -C <SGTC,> csl of congestion control algorithms to measure (c = cubic, r = reno) (default: r)
   -D #       dump the first # packets of a measurement
+  -E <DV,>   three delay values: each one value or multiple seconds-delay values (default: 125)
+  -L <#,>    percentages of packets to be dropped
   -N #       number of goodput measurements per config (default: 1)
   -O <#,>    csl of orbits to measure (GEO|MEO|LEO) (default: GEO)
   -P #       seconds to prime a new environment with some pings (default: 5)
@@ -544,7 +553,7 @@ function _osnd_parse_args() {
 	local -a new_udp_buffer_sizes=()
 	local -a new_delays=()
 	local measure_cli_args="false"
-	while getopts ":f:hst:vA:B:C:D:E:N:O:P:Q:T:U:VWXYZ" opt; do
+	while getopts ":f:hst:vA:B:C:D:E:L:N:O:P:Q:T:U:VWXYZ" opt; do
 		if [[ "${opt^^}" == "$opt" ]]; then
 			measure_cli_args="true"
 			if [[ "$scenario_file" != "" ]]; then
@@ -641,6 +650,15 @@ function _osnd_parse_args() {
 			fi
 			new_delays+=("$OPTARG")
 			;;
+		L)
+			IFS=',' read -ra packet_losses <<<"$OPTARG"
+			for loss in "${loss_values[@]}"; do
+				if ! [[ "${loss}" =~ ^[0-9]+(.[0-9]+)?$ ]]; then
+					echo "Invalid float value for -L"
+					exit 1
+				fi
+			done
+			;;
 		N)
 			if [[ "$OPTARG" =~ ^[0-9]+$ ]]; then
 				run_cnt=$OPTARG
@@ -734,6 +752,7 @@ function _main() {
 	declare -a quicly_buffer_sizes=("1M,1M,1M,1M")
 	declare -a udp_buffer_sizes=("1M,1M,1M,1M")
 	declare -a delays=("125,125")
+	declare -a packet_losses=(0)
 
 	_osnd_parse_args "$@"
 

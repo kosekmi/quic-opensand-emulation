@@ -98,10 +98,11 @@ function osnd_setup() {
 	local delay_ground="$(_osnd_orbit_ground_delay "$orbit")"
 	local delay_gw="${scenario_config_ref['delay_gw']:-125}"
 	local delay_st="${scenario_config_ref['delay_st']:-125}"
+	local packet_loss="${scenario_config_ref['loss']:-0}"
 
 	log I "Setting up emulation environment"
 
-	osnd_setup_namespaces "$delay_ground"
+	osnd_setup_namespaces "$delay_ground" "$packet_loss"
 	_osnd_configure_cc "$cc_cl" "$cc_st" "$cc_emu" "$cc_gw" "$cc_sv"
 	sleep 1
 	osnd_setup_opensand "$delay_gw" "$delay_st" "$attenuation" "$modulation_id"
