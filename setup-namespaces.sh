@@ -73,8 +73,6 @@ function _osnd_setup_add_namespaces() {
 
 	sudo ip netns exec osnd-st ip link set tap-st master br-st
 	sudo ip netns exec osnd-gw ip link set tap-gw master br-gw
-
-	# Set packet loss for link
 }
 
 # _osnd_setup_ip_config()
@@ -150,6 +148,7 @@ function _osnd_setup_ground_delay() {
 	fi
 }
 
+# _osnd_setup_packet_loss(packet_loss)
 function _osnd_setup_packet_loss() {
 	local packet_loss="$1"
 

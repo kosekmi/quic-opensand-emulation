@@ -652,7 +652,7 @@ function _osnd_parse_args() {
 			;;
 		L)
 			IFS=',' read -ra packet_losses <<<"$OPTARG"
-			for loss in "${loss_values[@]}"; do
+			for loss in "${packet_losses[@]}"; do
 				if ! [[ "${loss}" =~ ^[0-9]+(.[0-9]+)?$ ]]; then
 					echo "Invalid float value for -L"
 					exit 1
