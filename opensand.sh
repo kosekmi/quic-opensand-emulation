@@ -534,6 +534,7 @@ Scenario configuration:
   -C <SGTC,> csl of congestion control algorithms to measure (c = cubic, r = reno) (default: r)
   -D #       dump the first # packets of a measurement
   -E <DV,>   three delay values: each one value or multiple seconds-delay values (default: 125)
+  -F <#,>    three values: max. ACK Delay, packet no. after which first ack frequency packet is sent, fraction of CWND to be used in ACK frequency frame (default: 25, 1000, 8)
   -I <#,>*   csl of four qperf quicly initial window sizes for SGTC (default: 10)
   -L <#,>    percentages of packets to be dropped
   -N #       number of goodput measurements per config (default: 1)
