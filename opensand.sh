@@ -223,8 +223,10 @@ function _osnd_generate_scenarios() {
 							for delay in "${delays[@]}"; do
 								for loss in "${packet_losses[@]}"; do
 									for iw in "${iws[@]}"; do
-										local scenario_options="-O ${orbit} -A ${attenuation} -C ${ccs} -B ${tbs} -Q ${qbs} -U ${ubs} -E ${delay} -L ${loss} -I ${iw}"
-										echo "$common_options $scenario_options" >>"$scenario_file"
+										for ack_freq in "${ack_freqs[@]}"; do
+											local scenario_options="-O ${orbit} -A ${attenuation} -C ${ccs} -B ${tbs} -Q ${qbs} -U ${ubs} -E ${delay} -L ${loss} -I ${iw} -F ${ack_freq}"
+											echo "$common_options $scenario_options" >>"$scenario_file"
+										done
 									done
 								done
 							done
@@ -246,7 +248,7 @@ function _osnd_read_scenario() {
 	local -n config_ref="$1"
 	local scenario="$2"
 
-	local parsed_scenario_args=$(getopt -n "opensand scenario" -o "A:B:C:D:E:I:M:N:L:O:P:Q:T:U:VWXYZ" -l "attenuation:,transport-buffers:,congestion-control:,dump:,modulation:,runs:,orbits:,prime:,quicly-buffers:,timing-runs:,delay:,loss:,initial-window:,udp-buffers:,disable-plain,disable-pep,disable-ping,disable-quic,disable-tcp" -- $scenario)
+	local parsed_scenario_args=$(getopt -n "opensand scenario" -o "A:B:C:D:E:F:I:M:N:L:O:P:Q:T:U:VWXYZ" -l "attenuation:,transport-buffers:,congestion-control:,dump:,modulation:,runs:,orbits:,prime:,quicly-buffers:,timing-runs:,delay:,loss:,initial-window:,udp-buffers:,ack-frequency:,disable-plain,disable-pep,disable-ping,disable-quic,disable-tcp" -- $scenario)
 	local parsing_status=$?
 	if [ "$parsing_status" != "0" ]; then
 		return 1
@@ -274,6 +276,10 @@ function _osnd_read_scenario() {
 			;;
 		-E | --delay)
 			config_ref['delay']="$2"
+			shift 2
+			;;
+		-F | --ack-frequency)
+			config_ref['ack_freq']="$2"
 			shift 2
 			;;
 		-I | --initial-window)
@@ -448,6 +454,7 @@ function _osnd_run_scenarios() {
 		scenario_config['delay']="125,125"
 		scenario_config['loss']=0
 		scenario_config['iw']="10,10,10,10"
+		scenario_config['ack_freq']="25,1000,8"
 
 		_osnd_read_scenario scenario_config "$scenario"
 		local read_status=$?
@@ -494,6 +501,12 @@ function _osnd_run_scenarios() {
 		scenario_config['iw_gw']="${iw_sizes[1]}"
 		scenario_config['iw_st']="${iw_sizes[2]}"
 		scenario_config['iw_cl']="${iw_sizes[3]}"
+
+		local -a ack_freq_params=()
+		IFS=',' read -ra ack_freq_params <<<"${scenario_config['ack_freq']}"
+		scenario_config['max_ack_delay']="${ack_freq_params[0]}"
+		scenario_config['first_ack_freq_packet_number']="${ack_freq_params[1]}"
+		scenario_config['ack_freq_cwnd_fraction']="${ack_freq_params[2]}"
 
 		# Execute scenario
 		echo "${scenario_config['id']} $scenario" >>"${EMULATION_DIR}/scenarios.txt"
@@ -568,8 +581,9 @@ function _osnd_parse_args() {
 	local -a new_udp_buffer_sizes=()
 	local -a new_delays=()
 	local -a new_quicly_iw_sizes=()
+	local -a new_quicly_ack_freq=()
 	local measure_cli_args="false"
-	while getopts ":f:hst:vA:B:C:D:E:I:L:N:O:P:Q:T:U:VWXYZ" opt; do
+	while getopts ":f:hst:vA:B:C:D:E:F:I:L:N:O:P:Q:T:U:VWXYZ" opt; do
 		if [[ "${opt^^}" == "$opt" ]]; then
 			measure_cli_args="true"
 			if [[ "$scenario_file" != "" ]]; then
@@ -665,6 +679,29 @@ function _osnd_parse_args() {
 				done
 			fi
 			new_delays+=("$OPTARG")
+			;;
+		F)
+			IFS=',' read -ra ack_freq_values <<<"$OPTARG"
+			if [[ "${#ack_freq_values[@]}" != 3 ]]; then
+				echo "Need exactly three ack frequency values, ${#ack_freq_values[@]} given in '${ack_freq_values[@]}'"
+				exit 1
+			else
+				for ack_freq in "${ack_freq_values[@]}"; do
+					if ! [[ "${ack_freq}" =~ ^[0-9]+$ ]]; then
+						echo "Invalid integer value for -F"
+						exit 1
+					fi
+				done
+				if [[ ack_freq_values[1] -gt 65535 ]]; then
+					echo "First packet number has the type uint16 and cannot be larger than 65535"
+					exit 1
+				fi
+				if [[ ack_freq_values[2] -gt 255 ]]; then
+					echo "CWND fraction has the type uint8 and cannot be larger than 255"
+					exit 1
+				fi
+			fi
+			new_quicly_ack_freq+=("$OPTARG")
 			;;
 		I)
 			IFS=',' read -ra iw_sizes_config <<< "$OPTARG"
@@ -776,6 +813,9 @@ function _osnd_parse_args() {
 	if [[ "${#new_quicly_iw_sizes[@]}" > 0 ]]; then
 		iws=("${new_quicly_iw_sizes[@]}")
 	fi
+	if [[ "${#new_quicly_ack_freq[@]}" > 0 ]]; then
+		ack_freqs=("${new_quicly_ack_freq[@]}")
+	fi
 }
 
 function _main() {
@@ -788,6 +828,7 @@ function _main() {
 	declare -a delays=("125,125")
 	declare -a packet_losses=(0)
 	declare -a iws=("10,10,10,10")
+	declare -a ack_freqs=("25,1000,8")
 
 	_osnd_parse_args "$@"
 
