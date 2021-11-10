@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# _osnd_quic_measure(output_dir, run_id, cc, tbs, qbs, ubs, iw, max_ack_delay, first_ack_freq_packet_number, ack_freq_cwnd_fraction, measure_secs, timeout, server_ip)
+# _osnd_quic_measure(output_dir, run_id, cc, tbs, qbs, ubs, iw, max_ack_delay, first_ack_freq_packet_number, ack_freq_cwnd_fraction, qlog_file, measure_secs, timeout, server_ip)
 function _osnd_quic_measure() {
 	local output_dir="$1"
 	local run_id="$2"
@@ -12,9 +12,10 @@ function _osnd_quic_measure() {
 	local max_ack_delay="$8"
 	local first_ack_freq_packet_number="$9"
 	local ack_freq_cwnd_fraction="${10}"
-	local measure_secs="${11}"
-	local timeout="${12}"
-	local server_ip="${13}"
+	local qlog_file_client="${11}"
+	local measure_secs="${12}"
+	local timeout="${13}"
+	local server_ip="${14}"
 
 	local measure_opt="-t ${measure_secs}"
 	if [[ "$measure_secs" -lt 0 ]]; then
@@ -22,7 +23,7 @@ function _osnd_quic_measure() {
 	fi
 
 	log I "Running qperf client"
-	sudo timeout --foreground $timeout ip netns exec osnd-cl ${QPERF_BIN} -c ${server_ip} -p 18080 --cc ${cc} -i ${REPORT_INTERVAL} -b ${tbs} -q ${qbs} -u ${ubs} -w ${iw} --max-ack-delay ${max_ack_delay} --first-ack-freq-packet-number ${first_ack_freq_packet_number} --ack-freq-cwnd-fraction ${ack_freq_cwnd_fraction} $measure_opt --print-raw >"${output_dir}/${run_id}_client.txt"
+	sudo timeout --foreground $timeout ip netns exec osnd-cl ${QPERF_BIN} -c ${server_ip} -p 18080 --cc ${cc} -i ${REPORT_INTERVAL} -b ${tbs} -q ${qbs} -u ${ubs} -w ${iw} --events ${qlog_file_client} --max-ack-delay ${max_ack_delay} --first-ack-freq-packet-number ${first_ack_freq_packet_number} --ack-freq-cwnd-fraction ${ack_freq_cwnd_fraction} $measure_opt --print-raw >"${output_dir}/${run_id}_client.txt"
 	local status=$?
 
 	# Check for error, report if any
@@ -38,7 +39,7 @@ function _osnd_quic_measure() {
 	return $status
 }
 
-# _osnd_quic_server_start(output_dir, run_id, cc, tbs, qbs, ubs, iw, max_ack_delay, first_ack_freq_packet_number, ack_freq_cwnd_fraction)
+# _osnd_quic_server_start(output_dir, run_id, cc, tbs, qbs, ubs, iw, max_ack_delay, first_ack_freq_packet_number, ack_freq_cwnd_fraction, qlog_file)
 function _osnd_quic_server_start() {
 	local output_dir="$1"
 	local run_id="$2"
@@ -50,13 +51,14 @@ function _osnd_quic_server_start() {
 	local max_ack_delay="$8"
 	local first_ack_freq_packet_number="$9"
 	local ack_freq_cwnd_fraction="${10}"
+	local qlog_file_server="${11}"
 
 	log I "Starting qperf server"
 	sudo ip netns exec osnd-sv killall qperf -q
 	tmux -L ${TMUX_SOCKET} new-session -s qperf-server -d "sudo ip netns exec osnd-sv bash"
 	sleep $TMUX_INIT_WAIT
 	tmux -L ${TMUX_SOCKET} send-keys -t qperf-server \
-		"${QPERF_BIN} -s --tls-cert ${QPERF_CRT} --tls-key ${QPERF_KEY} --cc ${cc} -i ${REPORT_INTERVAL} -b ${tbs} -q ${qbs} -u ${ubs} -w ${iw} --max-ack-delay ${max_ack_delay} --first-ack-freq-packet-number ${first_ack_freq_packet_number} --ack-freq-cwnd-fraction ${ack_freq_cwnd_fraction} --listen-addr ${SV_LAN_SERVER_IP%%/*} --listen-port 18080 --print-raw > '${output_dir}/${run_id}_server.txt' 2> >(awk '{print(\"E\", \"qperf-server:\", \$0)}' > ${OSND_TMP}/logging)" \
+		"${QPERF_BIN} -s --tls-cert ${QPERF_CRT} --tls-key ${QPERF_KEY} --cc ${cc} -i ${REPORT_INTERVAL} -b ${tbs} -q ${qbs} -u ${ubs} -w ${iw} --events ${qlog_file_server} --max-ack-delay ${max_ack_delay} --first-ack-freq-packet-number ${first_ack_freq_packet_number} --ack-freq-cwnd-fraction ${ack_freq_cwnd_fraction} --listen-addr ${SV_LAN_SERVER_IP%%/*} --listen-port 18080 --print-raw > '${output_dir}/${run_id}_server.txt' 2> >(awk '{print(\"E\", \"qperf-server:\", \$0)}' > ${OSND_TMP}/logging)" \
 		Enter
 }
 
@@ -168,7 +170,7 @@ function _osnd_measure_quic() {
 		sleep $MEASURE_WAIT
 
 		# Server
-		_osnd_quic_server_start "$output_dir" "$run_id" "${scenario_config_ref['cc_sv']:-reno}" "${scenario_config_ref['tbs_sv']:-1M}" "${scenario_config_ref['qbs_sv']:-1M}" "${scenario_config_ref['ubs_sv']:-1M}" "${scenario_config_ref['iw_sv']:-10}" "${scenario_config['max_ack_delay']:-25}" "${scenario_config['first_ack_freq_packet_number']:-1000}" "${scenario_config['ack_freq_cwnd_fraction']:-8}"
+		_osnd_quic_server_start "$output_dir" "$run_id" "${scenario_config_ref['cc_sv']:-reno}" "${scenario_config_ref['tbs_sv']:-1M}" "${scenario_config_ref['qbs_sv']:-1M}" "${scenario_config_ref['ubs_sv']:-1M}" "${scenario_config_ref['iw_sv']:-10}" "${scenario_config['max_ack_delay']:-25}" "${scenario_config['first_ack_freq_packet_number']:-1000}" "${scenario_config['ack_freq_cwnd_fraction']:-8}" "${scenario_config['qlog_file_server']}"
 		sleep $MEASURE_WAIT
 
 		# Proxy
@@ -178,7 +180,7 @@ function _osnd_measure_quic() {
 		fi
 
 		# Client
-		_osnd_quic_measure "$output_dir" "$run_id" "${scenario_config_ref['cc_cl']:-reno}" "${scenario_config_ref['tbs_cl']:-1M}" "${scenario_config_ref['qbs_cl']:-1M}" "${scenario_config_ref['ubs_cl']:-1M}" "${scenario_config_ref['iw_cl']:-10}" "${scenario_config['max_ack_delay']:-25}" "${scenario_config['first_ack_freq_packet_number']:-1000}" "${scenario_config['ack_freq_cwnd_fraction']:-8}" $measure_secs $timeout "$server_ip"
+		_osnd_quic_measure "$output_dir" "$run_id" "${scenario_config_ref['cc_cl']:-reno}" "${scenario_config_ref['tbs_cl']:-1M}" "${scenario_config_ref['qbs_cl']:-1M}" "${scenario_config_ref['ubs_cl']:-1M}" "${scenario_config_ref['iw_cl']:-10}" "${scenario_config['max_ack_delay']:-25}" "${scenario_config['first_ack_freq_packet_number']:-1000}" "${scenario_config['ack_freq_cwnd_fraction']:-8}" "${scenario_config['qlog_file_client']}" $measure_secs $timeout "$server_ip"
 		sleep $MEASURE_GRACE
 
 		# Cleanup

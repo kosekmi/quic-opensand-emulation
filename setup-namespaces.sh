@@ -75,9 +75,14 @@ function _osnd_setup_add_namespaces() {
 	sudo ip netns exec osnd-gw ip link set tap-gw master br-gw
 }
 
-# _osnd_setup_ip_config()
+# _osnd_setup_ip_config(iw_sv, iw_gw, iw_st, iw_cl)
 function _osnd_setup_ip_config() {
 	log D "Configuring ip addresses and routes"
+
+	local iw_sv="$1"
+	local iw_gw="$2"
+	local iw_st="$3"
+	local iw_cl="$4"
 
 	# Enable IP Forwarding
 	sudo ip netns exec osnd-st sysctl -wq net.ipv4.ip_forward=1
@@ -124,16 +129,16 @@ function _osnd_setup_ip_config() {
 	sudo ip netns exec osnd-gw ip link set tap-gw up
 
 	# Add routes
-	sudo ip netns exec osnd-cl ip route add default via ${CL_LAN_ROUTER_IP%%/*}
-	sudo ip netns exec osnd-stp ip route add default via ${ST_LAN_ROUTER_IP%%/*}
+	sudo ip netns exec osnd-cl ip route add default via ${CL_LAN_ROUTER_IP%%/*} proto static initcwnd ${iw_cl}
+	sudo ip netns exec osnd-stp ip route add default via ${ST_LAN_ROUTER_IP%%/*} proto static initcwnd ${iw_st}
 	sudo ip netns exec osnd-st ip route add ${CL_LAN_NET} via ${ST_LAN_PROXY_IP%%/*}
 	sudo ip netns exec osnd-st ip route add ${GW_LAN_NET} via ${OVERLAY_GW_IP%%/*}
 	sudo ip netns exec osnd-st ip route add ${SV_LAN_NET} via ${OVERLAY_GW_IP%%/*}
 	sudo ip netns exec osnd-gw ip route add ${CL_LAN_NET} via ${OVERLAY_ST_IP%%/*}
 	sudo ip netns exec osnd-gw ip route add ${ST_LAN_NET} via ${OVERLAY_ST_IP%%/*}
 	sudo ip netns exec osnd-gw ip route add ${SV_LAN_NET} via ${GW_LAN_PROXY_IP%%/*}
-	sudo ip netns exec osnd-gwp ip route add default via ${GW_LAN_ROUTER_IP%%/*}
-	sudo ip netns exec osnd-sv ip route add default via ${SV_LAN_ROUTER_IP%%/*}
+	sudo ip netns exec osnd-gwp ip route add default via ${GW_LAN_ROUTER_IP%%/*} proto static initcwnd ${iw_gw}
+	sudo ip netns exec osnd-sv ip route add default via ${SV_LAN_ROUTER_IP%%/*} proto static initcwnd ${iw_sv}
 }
 
 # _osnd_setup_ground_delay(delay_ms)
@@ -158,14 +163,18 @@ function _osnd_setup_packet_loss() {
 	fi
 }
 
-# osnd_setup_namespaces(delay)
+# osnd_setup_namespaces(delay, packet_loss, iw_sv, iw_gw, iw_st, iw_cl)
 # Create the namespaces and all links within them for the emulation setup.
 function osnd_setup_namespaces() {
 	local delay="${1:-0}"
 	local packet_loss="${2:-0}"
+	local iw_sv="${3:-10}"
+	local iw_gw="${4:-10}"
+	local iw_st="${5:-10}"
+	local iw_cl="${6:-10}"
 
 	_osnd_setup_add_namespaces
-	_osnd_setup_ip_config
+	_osnd_setup_ip_config "$iw_sv" "$iw_gw" "$iw_st" "$iw_cl"
 	_osnd_setup_ground_delay "$delay"
 	_osnd_setup_packet_loss "$packet_loss"
 }

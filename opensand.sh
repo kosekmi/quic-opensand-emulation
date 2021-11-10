@@ -213,6 +213,9 @@ function _osnd_generate_scenarios() {
 	if [[ "$exec_tcp" != "true" ]]; then
 		common_options="$common_options -Z"
 	fi
+	if [[ ${#qlog_file} -le 0 ]]; then
+		qlog_file="${EMULATION_DIR}/client.qlog,${EMULATION_DIR}/server.qlog"
+	fi
 
 	for orbit in "${orbits[@]}"; do
 		for attenuation in "${attenuations[@]}"; do
@@ -224,7 +227,7 @@ function _osnd_generate_scenarios() {
 								for loss in "${packet_losses[@]}"; do
 									for iw in "${iws[@]}"; do
 										for ack_freq in "${ack_freqs[@]}"; do
-											local scenario_options="-O ${orbit} -A ${attenuation} -C ${ccs} -B ${tbs} -Q ${qbs} -U ${ubs} -E ${delay} -L ${loss} -I ${iw} -F ${ack_freq}"
+											local scenario_options="-O ${orbit} -A ${attenuation} -C ${ccs} -B ${tbs} -Q ${qbs} -U ${ubs} -E ${delay} -L ${loss} -I ${iw} -F ${ack_freq} -l ${qlog_file}"
 											echo "$common_options $scenario_options" >>"$scenario_file"
 										done
 									done
@@ -248,7 +251,7 @@ function _osnd_read_scenario() {
 	local -n config_ref="$1"
 	local scenario="$2"
 
-	local parsed_scenario_args=$(getopt -n "opensand scenario" -o "A:B:C:D:E:F:I:M:N:L:O:P:Q:T:U:VWXYZ" -l "attenuation:,transport-buffers:,congestion-control:,dump:,modulation:,runs:,orbits:,prime:,quicly-buffers:,timing-runs:,delay:,loss:,initial-window:,udp-buffers:,ack-frequency:,disable-plain,disable-pep,disable-ping,disable-quic,disable-tcp" -- $scenario)
+	local parsed_scenario_args=$(getopt -n "opensand scenario" -o "A:B:C:D:E:F:I:M:N:l:L:O:P:Q:T:U:VWXYZ" -l "attenuation:,transport-buffers:,congestion-control:,dump:,modulation:,runs:,orbits:,prime:,quicly-buffers:,timing-runs:,delay:,loss:,initial-window:,udp-buffers:,ack-frequency:,qlog-file:,disable-plain,disable-pep,disable-ping,disable-quic,disable-tcp" -- $scenario)
 	local parsing_status=$?
 	if [ "$parsing_status" != "0" ]; then
 		return 1
@@ -292,6 +295,10 @@ function _osnd_read_scenario() {
 			;;
 		-N | --runs)
 			config_ref['runs']="$2"
+			shift 2
+			;;
+		-l | --qlog-file)
+			config_ref['qlog_file']="$2"
 			shift 2
 			;;
 		-L | --loss)
@@ -508,6 +515,11 @@ function _osnd_run_scenarios() {
 		scenario_config['first_ack_freq_packet_number']="${ack_freq_params[1]}"
 		scenario_config['ack_freq_cwnd_fraction']="${ack_freq_params[2]}"
 
+		local -a qlog_files=()
+		IFS=',' read -ra qlog_files <<<"${scenario_config['qlog_file']}"
+		scenario_config['qlog_file_client']="${qlog_files[0]}"
+		scenario_config['qlog_file_server']="${qlog_files[1]}"
+
 		# Execute scenario
 		echo "${scenario_config['id']} $scenario" >>"${EMULATION_DIR}/scenarios.txt"
 		_osnd_exec_scenario_with_config scenario_config
@@ -534,9 +546,10 @@ Scenario configuration:
   -C <SGTC,> csl of congestion control algorithms to measure (c = cubic, r = reno) (default: r)
   -D #       dump the first # packets of a measurement
   -E <DV,>   three delay values: each one value or multiple seconds-delay values (default: 125)
-  -F <#,>    three values: max. ACK Delay, packet no. after which first ack frequency packet is sent, fraction of CWND to be used in ACK frequency frame (default: 25, 1000, 8)
+  -F <#,>*   three values: max. ACK Delay, packet no. after which first ack frequency packet is sent, fraction of CWND to be used in ACK frequency frame (default: 25, 1000, 8)
   -I <#,>*   csl of four qperf quicly initial window sizes for SGTC (default: 10)
-  -L <#,>    percentages of packets to be dropped
+  -l <#,>    two file paths for qlog file output: client, server (default: server.qlog und client.qlog in output directory) 
+  -L <#,>    percentages of packets to be dropped (default: 0%)
   -N #       number of goodput measurements per config (default: 1)
   -O <#,>    csl of orbits to measure (GEO|MEO|LEO) (default: GEO)
   -P #       seconds to prime a new environment with some pings (default: 5)
@@ -576,6 +589,7 @@ function _osnd_parse_args() {
 	exec_tcp=true
 	scenario_file=""
 	dump_packets=0
+	qlog_file=""
 
 	local -a new_transfer_buffer_sizes=()
 	local -a new_quicly_buffer_sizes=()
@@ -584,7 +598,7 @@ function _osnd_parse_args() {
 	local -a new_quicly_iw_sizes=()
 	local -a new_quicly_ack_freq=()
 	local measure_cli_args="false"
-	while getopts ":f:hst:vA:B:C:D:E:F:I:L:N:O:P:Q:T:U:VWXYZ" opt; do
+	while getopts ":f:hst:vA:B:C:D:E:F:I:l:L:N:O:P:Q:T:U:VWXYZ" opt; do
 		if [[ "${opt^^}" == "$opt" ]]; then
 			measure_cli_args="true"
 			if [[ "$scenario_file" != "" ]]; then
@@ -718,6 +732,14 @@ function _osnd_parse_args() {
 				done
 			fi
 			new_quicly_iw_sizes+=("$OPTARG")
+			;;
+		l)
+			IFS=',' read -ra qlog_files <<< "$OPTARG"
+			if [[ "${#qlog_files[@]}" != 2 ]]; then
+				echo "Need exactly two files, ${#qlog_files[@]} given in '$OPTARG'"
+				exit 1
+			fi 
+			qlog_file=$OPTARG
 			;;
 		L)
 			IFS=',' read -ra packet_losses <<<"$OPTARG"
