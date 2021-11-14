@@ -462,6 +462,7 @@ function _osnd_run_scenarios() {
 		scenario_config['loss']=0
 		scenario_config['iw']="10,10,10,10"
 		scenario_config['ack_freq']="25,1000,8"
+		scenario_config['qlog_file']="${EMULATION_DIR}/client.qlog,${EMULATION_DIR}/server.qlog"
 
 		_osnd_read_scenario scenario_config "$scenario"
 		local read_status=$?
@@ -726,7 +727,7 @@ function _osnd_parse_args() {
 			else 
 				for iw in "${iw_sizes_config[@]}"; do
 					if ! [[ "${iw}" =~ ^[0-9]+$ ]]; then
-						echo "Invalid integer value for -E"
+						echo "Invalid integer value for -I"
 						exit 1
 					fi
 				done
