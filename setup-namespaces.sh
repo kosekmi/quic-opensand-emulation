@@ -159,7 +159,7 @@ function _osnd_setup_packet_loss() {
 
 	log D "Configuring packet loss"
 	if [ "$packet_loss" -ne "0" ]; then
-		sudo ip netns exec osnd-emu tc qdisc add dev emu1l root netem loss ${packet_loss}%
+		sudo ip netns exec osnd-emu tc qdisc add dev emu0l root netem loss ${packet_loss}%
 	fi
 }
 
