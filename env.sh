@@ -5,7 +5,7 @@
 # File and directory paths
 
 # qperf binary
-QPERF_BIN="$HOME/build-qperf/qperf"
+QPERF_BIN="$HOME/qperf/build-qperf/qperf"
 # Certificate and key used by qperf
 QPERF_CRT="$HOME/server.crt"
 QPERF_KEY="$HOME/server.key"
@@ -18,7 +18,7 @@ OPENSAND_CONFIGS="${SCRIPT_DIR}/config"
 # Nginx configuration
 NGINX_CONFIG="${SCRIPT_DIR}/config/nginx.conf"
 # Output directory for all emulations (one subdirectory per emulation will be created)
-RESULTS_DIR="$HOME/out"
+RESULTS_DIR="${SCRIPT_DIR}/out"
 
 # Opensand network config
 
