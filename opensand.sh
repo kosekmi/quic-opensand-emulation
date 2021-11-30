@@ -19,8 +19,8 @@ source "${SCRIPT_DIR}/teardown-opensand.sh"
 source "${SCRIPT_DIR}/run-ping.sh"
 source "${SCRIPT_DIR}/run-quic.sh"
 source "${SCRIPT_DIR}/run-tcp.sh"
+source "${SCRIPT_DIR}/run-http.sh"
 source "${SCRIPT_DIR}/stats.sh"
-
 declare -A pids
 
 # log(level, message...)
@@ -213,6 +213,9 @@ function _osnd_generate_scenarios() {
 	if [[ "$exec_tcp" != "true" ]]; then
 		common_options="$common_options -Z"
 	fi
+	if [[ "$exec_http" != "true" ]]; then
+		common_options="$common_options -H"
+	fi
 	if [[ ${#qlog_file} -le 0 ]]; then
 		qlog_file="${EMULATION_DIR}/client.qlog,${EMULATION_DIR}/server.qlog"
 	fi
@@ -251,7 +254,7 @@ function _osnd_read_scenario() {
 	local -n config_ref="$1"
 	local scenario="$2"
 
-	local parsed_scenario_args=$(getopt -n "opensand scenario" -o "A:B:C:D:E:F:I:M:N:l:L:O:P:Q:T:U:VWXYZ" -l "attenuation:,transport-buffers:,congestion-control:,dump:,modulation:,runs:,orbits:,prime:,quicly-buffers:,timing-runs:,delay:,loss:,initial-window:,udp-buffers:,ack-frequency:,qlog-file:,disable-plain,disable-pep,disable-ping,disable-quic,disable-tcp" -- $scenario)
+	local parsed_scenario_args=$(getopt -n "opensand scenario" -o "A:B:C:D:E:F:HI:M:N:l:L:O:P:Q:T:U:VWXYZ" -l "attenuation:,transport-buffers:,congestion-control:,dump:,modulation:,runs:,orbits:,prime:,quicly-buffers:,timing-runs:,delay:,loss:,initial-window:,udp-buffers:,ack-frequency:,qlog-file:,disable-plain,disable-pep,disable-ping,disable-quic,disable-tcp,disable-http" -- $scenario)
 	local parsing_status=$?
 	if [ "$parsing_status" != "0" ]; then
 		return 1
@@ -284,6 +287,10 @@ function _osnd_read_scenario() {
 		-F | --ack-frequency)
 			config_ref['ack_freq']="$2"
 			shift 2
+			;;
+		-H | --disable-http)
+			config_ref['exec_http']="false"
+			shift 1
 			;;
 		-I | --initial-window)
 			config_ref['iw']="$2"
@@ -407,6 +414,14 @@ function _osnd_exec_scenario_with_config() {
 			osnd_measure_tcp_timing "$config_name" "$measure_output_dir" true $run_timing_cnt
 		fi
 	fi
+	if [[ "${config_ref['exec_http']:-true}" == true ]]; then
+		if [[ "${config_ref['exec_plain']:-true}" == true ]]; then
+			osnd_measure_http "$config_name" "$measure_output_dir" false $run_cnt
+		fi
+		if [[ "${config_ref['exec_pep']:-true}" == true ]]; then
+			osnd_measure_http "$config_name" "$measure_output_dir" true $run_cnt
+		fi
+	fi
 }
 
 #_osnd_get_cc(ccs, index)
@@ -445,6 +460,7 @@ function _osnd_run_scenarios() {
 		scenario_config['exec_ping']="true"
 		scenario_config['exec_quic']="true"
 		scenario_config['exec_tcp']="true"
+		scenario_config['exec_http']="true"
 
 		scenario_config['prime']=5
 		scenario_config['runs']=1
@@ -547,6 +563,7 @@ Scenario configuration:
   -C <SGTC,> csl of congestion control algorithms to measure (c = cubic, r = reno) (default: r)
   -D #       dump the first # packets of a measurement
   -E <GT,>   csl of two delay values: each one value or multiple seconds-delay values (default: 125)
+  -H         disable http measurements
   -F <#,>*   csl of three values: max. ACK Delay, packet no. after which first ack frequency packet is sent, fraction of CWND to be used in ACK frequency frame (default: 25, 1000, 8)
   -I <#,>*   csl of four qperf quicly initial window sizes for SGTC (default: 10)
   -l <#,>    csl of two file paths for qlog file output: client, server (default: server.qlog und client.qlog in output directory) 
@@ -588,6 +605,7 @@ function _osnd_parse_args() {
 	exec_ping=true
 	exec_quic=true
 	exec_tcp=true
+	exec_http=true
 	scenario_file=""
 	dump_packets=0
 	qlog_file=""
@@ -599,7 +617,7 @@ function _osnd_parse_args() {
 	local -a new_quicly_iw_sizes=()
 	local -a new_quicly_ack_freq=()
 	local measure_cli_args="false"
-	while getopts ":f:hst:vA:B:C:D:E:F:I:l:L:N:O:P:Q:T:U:VWXYZ" opt; do
+	while getopts ":f:hst:vA:B:C:D:E:F:HI:l:L:N:O:P:Q:T:U:VWXYZ" opt; do
 		if [[ "${opt^^}" == "$opt" ]]; then
 			measure_cli_args="true"
 			if [[ "$scenario_file" != "" ]]; then
@@ -718,6 +736,9 @@ function _osnd_parse_args() {
 				fi
 			fi
 			new_quicly_ack_freq+=("$OPTARG")
+			;;
+		H)
+			exec_http=false
 			;;
 		I)
 			IFS=',' read -ra iw_sizes_config <<< "$OPTARG"

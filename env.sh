@@ -13,10 +13,20 @@ QPERF_KEY="$HOME/server.key"
 PEPSAL_BIN="$HOME/pepsal/src/pepsal"
 # iperf3 binary
 IPERF_BIN="/usr/bin/iperf3"
+# h2o binary
+H2O_BIN="/usr/local/bin/h2o"
+# python binary
+PYTHON_BIN="/usr/bin/python"
+# chromium python script
+PYTHON_HTTP_SCRIPT="${SCRIPT_DIR}/run_http_measurements.py"
+# chrome driver
+CHROME_DRIVER_BIN="/usr/bin/chromium-browser"
 # Default OpenSAND entity configurations
 OPENSAND_CONFIGS="${SCRIPT_DIR}/config"
 # Nginx configuration
 NGINX_CONFIG="${SCRIPT_DIR}/config/nginx.conf"
+# h2o configuration
+H2O_CONFIG="${SCRIPT_DIR}/h2o_config"
 # Output directory for all emulations (one subdirectory per emulation will be created)
 RESULTS_DIR="$HOME/out"
 

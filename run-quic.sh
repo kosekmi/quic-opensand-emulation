@@ -74,7 +74,7 @@ function _osnd_quic_server_stop() {
 	tmux -L ${TMUX_SOCKET} kill-session -t qperf-server >/dev/null 2>&1
 }
 
-# _osnd_quic_proxies_start(output_dir, run_id, cc_gw, cc_st, tbs_gw, tbs_st, qbs_gw, qbs_st, ubs_gw, ubs_st, iw_gw, iw_st, max_ack_delay, first_ack_freq_packet_number, ack_freq_cwnd_fraction)
+# _osnd_quic_proxies_start(output_dir, run_id, cc_gw, cc_st, tbs_gw, tbs_st, qbs_gw, qbs_st, ubs_gw, ubs_st, iw_gw, iw_st, max_ack_delay, first_ack_freq_packet_number, ack_freq_cwnd_fraction, use_alpn, wait_for_svr)
 function _osnd_quic_proxies_start() {
 	local output_dir="$1"
 	local run_id="$2"
@@ -91,6 +91,16 @@ function _osnd_quic_proxies_start() {
 	local max_ack_delay="${11}"
 	local first_ack_freq_packet_number="${12}"
 	local ack_freq_cwnd_fraction="${13}"
+	local use_alpn="${14:-false}"
+	local wait_for_svr="${15:-false}"
+
+	local QPERF_BIN_LOCAL="${QPERF_BIN}"
+	if [[ "$use_alpn" == true ]]; then
+		QPERF_BIN_LOCAL="${QPERF_BIN_LOCAL} --alpn h3"
+	fi
+	if [[ "$wait_for_svr" == true ]]; then
+		QPERF_BIN_LOCAL="${QPERF_BIN_LOCAL} --wait_for_svr"
+	fi
 
 	log I "Starting qperf proxies"
 
