@@ -414,12 +414,23 @@ function _osnd_exec_scenario_with_config() {
 			osnd_measure_tcp_timing "$config_name" "$measure_output_dir" true $run_timing_cnt
 		fi
 	fi
+
 	if [[ "${config_ref['exec_http']:-true}" == true ]]; then
-		if [[ "${config_ref['exec_plain']:-true}" == true ]]; then
-			osnd_measure_http "$config_name" "$measure_output_dir" false $run_cnt
+		if [[ "${config_ref['exec_tcp']:-true}" == true ]]; then
+			if [[ "${config_ref['exec_plain']:-true}" == true ]]; then
+				osnd_measure_http "$config_name" "$measure_output_dir" false $run_cnt false
+			fi
+			if [[ "${config_ref['exec_pep']:-false}" == true ]]; then
+				osnd_measure_http "$config_name" "$measure_output_dir" true $run_cnt false
+			fi
 		fi
-		if [[ "${config_ref['exec_pep']:-true}" == true ]]; then
-			osnd_measure_http "$config_name" "$measure_output_dir" true $run_cnt
+		if [[ "${config_ref['exec_quic']:-true}" == true ]]; then
+			if [[ "${config_ref['exec_plain']:-true}" == true ]]; then
+				osnd_measure_http "$config_name" "$measure_output_dir" false $run_cnt true
+			fi
+			if [[ "${config_ref['exec_pep']:-true}" == true ]]; then
+				osnd_measure_http "$config_name" "$measure_output_dir" true $run_cnt true
+			fi
 		fi
 	fi
 }

@@ -6,30 +6,34 @@ import selenium.common.exceptions
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as chromeOptions
 import sys
-import sqlite3
 from datetime import datetime
 import hashlib
 import uuid
 import os
+import csv
 
 # performance elements to extract
-measurement_elements = ('id', 'protocol', 'server', 'domain', 'timestamp', 'connectEnd', 'connectStart', 'domComplete',
+measurement_elements = ('protocol', 'server', 'domain', 'timestamp', 'connectEnd', 'connectStart', 'domComplete',
                         'domContentLoadedEventEnd', 'domContentLoadedEventStart', 'domInteractive', 'domainLookupEnd',
                         'domainLookupStart', 'duration', 'encodedBodySize', 'decodedBodySize', 'transferSize',
                         'fetchStart', 'loadEventEnd', 'loadEventStart', 'requestStart', 'responseEnd', 'responseStart',
                         'secureConnectionStart', 'startTime', 'nextHopProtocol', 'cacheWarming', 'error')
 
-# create db
-db = sqlite3.connect('web-performance.db')
-cursor = db.cursor()
+file_elements = ('run', 'sat', 'rtt', 'prime', 'loss', 'ccs', 'tbs', 'qbs', 'ubs')
 
 # retrieve input params
 try:
     protocol = sys.argv[1]
     server = sys.argv[2]
     chrome_path = sys.argv[3]
+    output_dir = sys.argv[4]
+    file_elements_values = sys.argv[5].split(';')
 except IndexError:
-    print("Input params incomplete (protocol, server, chrome_driver)")
+    print("Input params incomplete (protocol, server, chrome_driver, output_dir)")
+    sys.exit(1)
+
+if len(file_elements) != len(file_elements_values):
+    print("Number of file elements does not match")
     sys.exit(1)
 
 # Chrome options
@@ -37,13 +41,17 @@ chrome_options = chromeOptions()
 chrome_options.add_argument('--no-sandbox')
 chrome_options.add_argument('--headless')
 chrome_options.add_argument('--disable-dev-shm-usage')
-chrome_options.add_argument('--enable-quic')
-chrome_options.add_argument('--origin-to-force-quic-on=example.com:443')
+if protocol == 'quic':
+    chrome_options.add_argument('--enable-quic')
+    chrome_options.add_argument('--origin-to-force-quic-on=example.com:443')
 chrome_options.add_argument('--allow_unknown_root_cer')
 chrome_options.add_argument('--disable_certificate_verification')
 chrome_options.add_argument('--ignore-urlfetcher-cert-requests')
-chrome_options.add_argument(f'--host-resolver-rules="MAP example.com {server}"')
-
+chrome_options.add_argument(f"--host-resolver-rules=MAP example.com {server}")
+chrome_options.add_argument('--verbose')
+chrome_options.add_argument('--disable-http-cache')
+# Function to create openssl x509 -pubkey < "pubkey.pem" | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64 > "fingerprints.txt"
+chrome_options.add_argument('--ignore-certificate-errors-spki-list=D29LAH0IMcLx/d7R2JAH5bw/YKYK9uNRYc6W0/GJlS8=')
 
 def create_driver():
     return webdriver.Chrome(options=chrome_options, executable_path=chrome_path)
@@ -60,8 +68,11 @@ def get_page_performance_metrics(driver, page):
             return entry.toJSON();
             """
     try:
-        driver.set_page_load_timeout(30)
-        driver.get(f'https://{page}')
+        driver.set_page_load_timeout(60)
+        if protocol == 'quic':
+            driver.get(f'https://{page}')
+        else:
+            driver.get(f'http://{page}')
         return driver.execute_script(script)
     except selenium.common.exceptions.WebDriverException as e:
         return {'error': str(e)}
@@ -71,9 +82,12 @@ def perform_page_load(page, cache_warming=0):
     driver = create_driver()
     timestamp = datetime.now()
     performance_metrics = get_page_performance_metrics(driver, page)
-    driver.quit()
+    #driver.quit()
     # insert page into database
     if 'error' not in performance_metrics:
+        # Print page source
+        # print(driver.page_source)
+        driver.save_screenshot(f'{output_dir}/screenshot.png')
         insert_performance(page, performance_metrics, timestamp, cache_warming=cache_warming)
     else:
         insert_performance(page, {k: 0 for k in measurement_elements}, timestamp, cache_warming=cache_warming,
@@ -81,52 +95,18 @@ def perform_page_load(page, cache_warming=0):
 
 
 def create_measurements_table():
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS measurements (
-            id string,
-            protocol string,
-            server string,
-            domain string,
-            timestamp datetime,
-            connectEnd integer,
-            connectStart integer,
-            domComplete integer,
-            domContentLoadedEventEnd integer,
-            domContentLoadedEventStart integer,
-            domInteractive integer,
-            domainLookupEnd integer,
-            domainLookupStart integer,
-            duration integer,
-            encodedBodySize integer,
-            decodedBodySize integer,
-            transferSize integer,
-            fetchStart integer,
-            loadEventEnd integer,
-            loadEventStart integer,
-            requestStart integer,
-            responseEnd integer,
-            responseStart integer,
-            secureConnectionStart integer,
-            startTime integer,
-            nextHopProtocol string,
-            cacheWarming integer,
-            error string,
-            PRIMARY KEY (id)
-        );
-        """)
-    db.commit()
-
-
-def create_qlogs_table():
-    cursor.execute("""
-            CREATE TABLE IF NOT EXISTS qlogs (
-                measurement_id string,
-                qlog string,
-                FOREIGN KEY (measurement_id) REFERENCES measurements(id)
-            );
-            """)
-    db.commit()
-
+    new = False
+    global local_csvfile
+    if os.path.isfile(f'{output_dir}/http.csv'):
+        local_csvfile = open(f'{output_dir}/http.csv', mode='a')
+    else:
+        local_csvfile = open(f'{output_dir}/http.csv', mode='w')
+        new = True
+    global csvfile
+    csvfile = csv.writer(local_csvfile, delimiter=';')
+    if new == True:
+        headers = file_elements + measurement_elements
+        csvfile.writerow(headers)
 
 def insert_performance(page, performance, timestamp, cache_warming=0, error=''):
     performance['protocol'] = protocol
@@ -135,37 +115,15 @@ def insert_performance(page, performance, timestamp, cache_warming=0, error=''):
     performance['timestamp'] = timestamp
     performance['cacheWarming'] = cache_warming
     performance['error'] = error
-    # generate unique ID
-    sha = hashlib.md5()
-    sha_input = ('' + protocol + server + page + str(cache_warming))
-    sha.update(sha_input.encode())
-    uid = uuid.UUID(sha.hexdigest())
-    performance['id'] = str(uid)
+    values = file_elements_values.copy()
 
-    # insert into database
-    cursor.execute(f"""
-    INSERT INTO measurements VALUES ({(len(measurement_elements) - 1) * '?,'}?);
-    """, tuple([performance[m_e] for m_e in measurement_elements]))
-    db.commit()
+    for m_e in measurement_elements:
+        values.append(performance[m_e])
 
-    if protocol == 'quic':
-        insert_qlogs(str(uid))
-
-
-def insert_qlogs(uid):
-    with open(f"{dnsproxy_dir}qlogs.txt", "r") as qlogs:
-        log = qlogs.read()
-        cursor.execute("""
-            INSERT INTO qlogs VALUES (?,?);
-            """, (uid, log))
-        db.commit()
-    # remove the qlogs after dumping it into the db
-    with open(f"{dnsproxy_dir}qlogs.txt", "w") as qlogs:
-        qlogs.write('')
+    csvfile.writerow(values)
 
 create_measurements_table()
-create_qlogs_table()
 # performance measurement
 perform_page_load("example.com")
 
-db.close()
+local_csvfile.close()

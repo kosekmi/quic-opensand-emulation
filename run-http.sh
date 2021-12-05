@@ -4,7 +4,9 @@
 # Start HTTP Server
 function _osnd_http_server_start() {
 	local output_dir=$1
+	log I "Starting h2o server"
 
+	sudo ip netns exec osnd-sv killall h2o -q
 	tmux -L ${TMUX_SOCKET} new-session -s http-server -d "sudo ip netns exec osnd-sv bash"
 	sleep $TMUX_INIT_WAIT
 	tmux -L ${TMUX_SOCKET} send-keys -t http-server \
@@ -29,9 +31,21 @@ function osnd_http_client_start() {
 	local output_dir=$1
 	local server_ip=$2
 	local timeout=$3
+	local quic=$4
+	local scenario_config_name=$5
+	local run=$6
+
+	local -n scenario_config_ref=$scenario_config_name
+
+	local protocol="http"
+	
+	if [[ "$quic" == true ]]; then
+		local protocol="quic"
+	fi
 
 	log I "Running chromium script"
-	sudo timeout --foreground $timeout ip netns exec osnd-cl ${PYTHON_BIN} ${PYTHON_HTTP_SCRIPT} "http3" ${server_ip} ${CHROME_DRIVER_BIN}
+	# sleep 1000
+	sudo timeout --foreground $timeout ip netns exec osnd-cl ${PYTHON_BIN} ${PYTHON_HTTP_SCRIPT} ${protocol} ${server_ip} ${CHROME_DRIVER_BIN} ${output_dir} "${run};${scenario_config_ref['orbit']};${scenario_config_ref['delay']};${scenario_config_ref['prime']};${scenario_config_ref['loss']};${scenario_config_ref['ccs']};${scenario_config_ref['tbs']};${scenario_config_ref['qbs']};${scenario_config_ref['ubs']}"
 
 }
 
@@ -42,18 +56,21 @@ function osnd_measure_http() {
 	local output_dir=$2
 	local pep=$3
 	local run_cnt=$4
+	local quic=${5:-false}
 
-	local server_ip="${SV_LAN_SERVER_IP%%/*}"
+	local -n scenario_config_ref=$scenario_config_name
+	local server_ip="${SV_LAN_SERVER_IP%%/*}:18080"
 	local base_run_id="http"
 	local name_ext=""
 	local measure_secs=$MEASURE_TIME
 	local timeout=$(echo "${MEASURE_TIME} * 1.1" | bc -l)
-	echo "${timeout}"
 
 	if [[ "$pep" == true ]]; then
 		base_run_id="${base_run_id}_pep"
 		name_ext="${name_ext} (PEP)"
-		server_ip="${CL_LAN_ROUTER_IP%%/*}"
+		if  [[ "$quic" == true ]]; then
+			server_ip="${CL_LAN_ROUTER_IP%%/*}:18080"
+		fi
 	fi
 
 	for i in $(seq $run_cnt); do
@@ -68,17 +85,25 @@ function osnd_measure_http() {
 		sleep $MEASURE_WAIT
 		
 		if [[ "$pep" == true ]]; then
-			_osnd_quic_proxies_start "$output_dir" "$run_id" "${scenario_config_ref['cc_gw']:-reno}" "${scenario_config_ref['cc_st']:-reno}" "${scenario_config_ref['tbs_gw']:-1M}" "${scenario_config_ref['tbs_st']:-1M}" "${scenario_config_ref['qbs_gw']:-1M}" "${scenario_config_ref['qbs_st']:-1M}" "${scenario_config_ref['ubs_gw']:-1M}" "${scenario_config_ref['ubs_st']:-1M}" "${scenario_config_ref['iw_gw']:-10}" "${scenario_config_ref['iw_st']:-10}" "${scenario_config['max_ack_delay']:-25}" "${scenario_config['first_ack_freq_packet_number']:-1000}" "${scenario_config['ack_freq_cwnd_fraction']:-8}" true true
+			if [[ "$quic" == false ]]; then
+				_osnd_pepsal_proxies_start "$output_dir" "$run_id"
+			else
+				_osnd_quic_proxies_start "$output_dir" "$run_id" "${scenario_config_ref['cc_gw']:-reno}" "${scenario_config_ref['cc_st']:-reno}" "${scenario_config_ref['tbs_gw']:-1M}" "${scenario_config_ref['tbs_st']:-1M}" "${scenario_config_ref['qbs_gw']:-1M}" "${scenario_config_ref['qbs_st']:-1M}" "${scenario_config_ref['ubs_gw']:-1M}" "${scenario_config_ref['ubs_st']:-1M}" "${scenario_config_ref['iw_gw']:-10}" "${scenario_config_ref['iw_st']:-10}" "${scenario_config_ref['max_ack_delay']:-25}" "${scenario_config_ref['first_ack_freq_packet_number']:-1000}" "${scenario_config_ref['ack_freq_cwnd_fraction']:-8}" true true
+			fi
 			sleep $MEASURE_WAIT
 		fi
 
 		# Client
-		osnd_http_client_start output_dir server_ip timeout
+		osnd_http_client_start $output_dir $server_ip $timeout $quic $scenario_config_name $run_id
 		sleep $MEASURE_GRACE
 
 		# Cleanup
 		if [[ "$pep" == true ]]; then
-			_osnd_quic_proxies_stop
+			if [[ "$quic" == false ]]; then
+				_osnd_pepsal_proxies_stop
+			else 
+				_osnd_quic_proxies_stop
+			fi
 		fi
 		_osnd_quic_server_stop
 		osnd_teardown

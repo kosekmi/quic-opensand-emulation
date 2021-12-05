@@ -130,6 +130,8 @@ function _osnd_setup_ip_config() {
 
 	# Add routes
 	sudo ip netns exec osnd-cl ip route add default via ${CL_LAN_ROUTER_IP%%/*} proto static initcwnd ${iw_cl}
+	# Loopback needed for geckodriver in selenium
+	sudo ip netns exec osnd-cl ip link set dev lo up
 	sudo ip netns exec osnd-stp ip route add default via ${ST_LAN_ROUTER_IP%%/*} proto static initcwnd ${iw_st}
 	sudo ip netns exec osnd-st ip route add ${CL_LAN_NET} via ${ST_LAN_PROXY_IP%%/*}
 	sudo ip netns exec osnd-st ip route add ${GW_LAN_NET} via ${OVERLAY_GW_IP%%/*}
