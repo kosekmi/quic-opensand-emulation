@@ -14,8 +14,8 @@ function _osnd_http_server_start() {
 		Enter
 }
 
-function _osnd_quic_server_stop() {
-	log I "Stopping qperf server"
+function _osnd_http_server_stop() {
+	log I "Stopping http server"
 
 	tmux -L ${TMUX_SOCKET} send-keys -t http-server C-c
 	sleep $CMD_SHUTDOWN_WAIT
@@ -105,7 +105,7 @@ function osnd_measure_http() {
 				_osnd_quic_proxies_stop
 			fi
 		fi
-		_osnd_quic_server_stop
+		_osnd_http_server_stop
 		osnd_teardown
 
 
