@@ -109,14 +109,20 @@ executed, each being measured 5 times.
 | Name | Argument   | Description | Default | Type |
 | ---- | ---------- | --- | --- | --- |
 | `-A` | `<#,>`     | Comma separated list of attenuation values to measure | `0` | E |
-| `-B` | `<GT,>*`   | Comma separated list of two qperf transfer buffer sizes for gateway and terminal. Repeat parameter for multiple configurations | `1M,1M` | T |
+| `-B` | `<GT,>*`   | `QUIC-specific:` Comma separated list of two qperf transfer buffer sizes for gateway and terminal. Repeat parameter for multiple configurations | `1M,1M` | T |
 | `-C` | `<SGTC,>`  | Comma separated list of four congestion control algorithms for server, gateway, terminal and client. (c = cubic, r = reno) | `rrrr` | T |
+| `-D` | `#`        | dump the first # packets of a measurement | | M |
+| `-E` | `<GT,>`    | csl of two delay values: each one value or multiple seconds-delay values | `125` | M |
+| `-F` | `<#,>*`    | `QUIC-specific:` csl of three values: max. ACK Delay, packet no. after which first ack frequency packet is sent, fraction of CWND to be used in ACK frequency frame | `25, 1000, 8` | T |
+| `-I` | `<#,>*`    | csl of four initial window sizes for SGTC | `10` | T |
+| `-l` | `<#,>`     | `QUIC-specific:` csl of two file paths for qlog file output: client, server | `server.qlog und client.qlog in output directory` | T |
+| `-L` | `<#,>`     | percentages of packets to be dropped | `0` | M |
 | `-N` | `#`        | Number of runs per goodput measurement in a scenario | `1` | M |
 | `-O` | `<#,>`     | Comma separated list of orbits to measure (GEO,MEO,LEO) | `GEO` | E |
 | `-P` | `#`        | Number of seconds to prime a new environment with some pings | `5` | M |
-| `-Q` | `<SGTC,>*` | Comma separated list of four qperf quicly buffer sizes at server, gateway, terminal and client. Repeat parameter for multiple configurations | `1M,1M,1M,1M` | T |
+| `-Q` | `<SGTC,>*` | `QUIC-specific:` Comma separated list of four qperf quicly buffer sizes at server, gateway, terminal and client. Repeat parameter for multiple configurations | `1M,1M,1M,1M` | T |
 | `-T` | `#`        | Number of runs per timing measurement in a scenario | `4` | M |
-| `-U` | `<SGTC,>*` | Comma separated list of four qperf udp buffer sizes at server, gateway, terminal and client. Repeat parameter for multiple configurations | `1M,1M,1M,1M` | T |
+| `-U` | `<SGTC,>*` | `QUIC-specific:` Comma separated list of four qperf udp buffer sizes at server, gateway, terminal and client. Repeat parameter for multiple configurations | `1M,1M,1M,1M` | T |
 | `-V` |            | Disable plain (non pep) measurements | | M |
 | `-W` |            | Disable pep measurements | | M |
 | `-X` |            | Disable ping measurements | | M |

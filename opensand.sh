@@ -570,21 +570,21 @@ General:
 
 Scenario configuration:
   -A <#,>    csl of attenuations to measure (default: 0db)
-  -B <#,>*   csl of two qperf transfer buffer sizes for G and T (default: 1M)
+  -B <#,>*   QUIC-specific: csl of two qperf transfer buffer sizes for G and T (default: 1M)
   -C <SGTC,> csl of congestion control algorithms to measure (c = cubic, r = reno) (default: r)
   -D #       dump the first # packets of a measurement
   -E <GT,>   csl of two delay values: each one value or multiple seconds-delay values (default: 125)
   -H         disable http measurements
-  -F <#,>*   csl of three values: max. ACK Delay, packet no. after which first ack frequency packet is sent, fraction of CWND to be used in ACK frequency frame (default: 25, 1000, 8)
-  -I <#,>*   csl of four qperf quicly initial window sizes for SGTC (default: 10)
-  -l <#,>    csl of two file paths for qlog file output: client, server (default: server.qlog und client.qlog in output directory) 
+  -F <#,>*   QUIC-specific: csl of three values: max. ACK Delay, packet no. after which first ack frequency packet is sent, fraction of CWND to be used in ACK frequency frame (default: 25, 1000, 8)
+  -I <#,>*   csl of four initial window sizes for SGTC (default: 10)
+  -l <#,>    QUIC-specific: csl of two file paths for qlog file output: client, server (default: server.qlog und client.qlog in output directory) 
   -L <#,>    percentages of packets to be dropped (default: 0%)
   -N #       number of goodput measurements per config (default: 1)
   -O <#,>    csl of orbits to measure (GEO|MEO|LEO) (default: GEO)
   -P #       seconds to prime a new environment with some pings (default: 5)
-  -Q <#,>*   csl of four qperf quicly buffer sizes for SGTC (default: 1M)
+  -Q <#,>*   QUIC-specific: csl of four qperf quicly buffer sizes for SGTC (default: 1M)
   -T #       number of timing measurements per config (default: 4)
-  -U <#,>*   csl of four qperf udp buffer sizes for SGTC (default: 1M)
+  -U <#,>*   QUIC-specific: csl of four qperf udp buffer sizes for SGTC (default: 1M)
   -V         disable plain (non pep) measurements
   -W         disable pep measurements
   -X         disable ping measurement
