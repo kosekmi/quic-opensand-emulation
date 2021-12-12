@@ -33,7 +33,8 @@ function osnd_http_client_start() {
 	local timeout=$3
 	local quic=$4
 	local scenario_config_name=$5
-	local run=$6
+	local pep=$6
+	local run=$7
 
 	local -n scenario_config_ref=$scenario_config_name
 
@@ -45,7 +46,7 @@ function osnd_http_client_start() {
 
 	log I "Running chromium script"
 	# sleep 1000
-	sudo timeout --foreground $timeout ip netns exec osnd-cl ${PYTHON_BIN} ${PYTHON_HTTP_SCRIPT} ${protocol} ${server_ip} ${CHROME_DRIVER_BIN} ${output_dir} "${run};${scenario_config_ref['orbit']};${scenario_config_ref['delay']};${scenario_config_ref['prime']};${scenario_config_ref['loss']};${scenario_config_ref['ccs']};${scenario_config_ref['tbs']};${scenario_config_ref['qbs']};${scenario_config_ref['ubs']}"
+	sudo timeout --foreground $timeout ip netns exec osnd-cl ${PYTHON_BIN} ${PYTHON_HTTP_SCRIPT} ${protocol} ${server_ip} ${CHROME_DRIVER_BIN} ${output_dir} "${pep};${run}"
 
 }
 
@@ -94,7 +95,7 @@ function osnd_measure_http() {
 		fi
 
 		# Client
-		osnd_http_client_start $output_dir $server_ip $timeout $quic $scenario_config_name $run_id
+		osnd_http_client_start $output_dir $server_ip $timeout $quic $scenario_config_name $pep $run_id
 		sleep $MEASURE_GRACE
 
 		# Cleanup

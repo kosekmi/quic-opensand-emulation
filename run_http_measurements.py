@@ -17,9 +17,9 @@ measurement_elements = ('protocol', 'server', 'domain', 'timestamp', 'connectEnd
                         'domContentLoadedEventEnd', 'domContentLoadedEventStart', 'domInteractive', 'domainLookupEnd',
                         'domainLookupStart', 'duration', 'encodedBodySize', 'decodedBodySize', 'transferSize',
                         'fetchStart', 'loadEventEnd', 'loadEventStart', 'requestStart', 'responseEnd', 'responseStart',
-                        'secureConnectionStart', 'startTime', 'nextHopProtocol', 'cacheWarming', 'error')
+                        'secureConnectionStart', 'startTime', 'firstPaint', 'firstContentfulPaint', 'nextHopProtocol', 'cacheWarming', 'error')
 
-file_elements = ('run', 'sat', 'rtt', 'prime', 'loss', 'ccs', 'tbs', 'qbs', 'ubs')
+file_elements = ('pep', 'run')
 
 # retrieve input params
 try:
@@ -50,7 +50,7 @@ chrome_options.add_argument('--ignore-urlfetcher-cert-requests')
 chrome_options.add_argument(f"--host-resolver-rules=MAP example.com {server}")
 chrome_options.add_argument('--verbose')
 chrome_options.add_argument('--disable-http-cache')
-# Function to create openssl x509 -pubkey < "pubkey.pem" | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64 > "fingerprints.txt"
+# Function to create: openssl x509 -pubkey < "pubkey.pem" | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64 > "fingerprints.txt"
 chrome_options.add_argument('--ignore-certificate-errors-spki-list=D29LAH0IMcLx/d7R2JAH5bw/YKYK9uNRYc6W0/GJlS8=')
 
 def create_driver():
@@ -59,13 +59,30 @@ def create_driver():
 
 def get_page_performance_metrics(driver, page):
     script = """
-            // Get a resource performance entry
+            // Get performance and paint entries
             var perfEntries = performance.getEntriesByType("navigation");
-
+            var paintEntries = performance.getEntriesByType("paint");
+    
             var entry = perfEntries[0];
-
-            // Get the JSON
-            return entry.toJSON();
+            var fpEntry = paintEntries[0];
+            var fcpEntry = paintEntries[1];
+    
+            // Get the JSON and first paint + first contentful paint
+            var resultJson = entry.toJSON();
+            resultJson.firstPaint = 0;
+            resultJson.firstContentfulPaint = 0;
+            try {
+                for (var i=0; i<paintEntries.length; i++) {
+                    var pJson = paintEntries[i].toJSON();
+                    if (pJson.name == 'first-paint') {
+                        resultJson.firstPaint = pJson.startTime;
+                    } else if (pJson.name == 'first-contentful-paint') {
+                        resultJson.firstContentfulPaint = pJson.startTime;
+                    }
+                }
+            } catch(e) {}
+            
+            return resultJson;
             """
     try:
         driver.set_page_load_timeout(60)
@@ -97,10 +114,11 @@ def perform_page_load(page, cache_warming=0):
 def create_measurements_table():
     new = False
     global local_csvfile
-    if os.path.isfile(f'{output_dir}/http.csv'):
-        local_csvfile = open(f'{output_dir}/http.csv', mode='a')
+    file_path = f'{output_dir}/http.csv' if file_elements_values[0] == 'false' else f'{output_dir}/http_pep.csv'
+    if os.path.isfile(file_path):
+        local_csvfile = open(file_path, mode='a')
     else:
-        local_csvfile = open(f'{output_dir}/http.csv', mode='w')
+        local_csvfile = open(file_path, mode='w')
         new = True
     global csvfile
     csvfile = csv.writer(local_csvfile, delimiter=';')
