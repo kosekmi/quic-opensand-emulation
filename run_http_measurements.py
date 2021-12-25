@@ -99,7 +99,6 @@ def perform_page_load(page, cache_warming=0):
     driver = create_driver()
     timestamp = datetime.now()
     performance_metrics = get_page_performance_metrics(driver, page)
-    driver.quit()
     # insert page into database
     if 'error' not in performance_metrics:
         # Print page source
@@ -109,6 +108,7 @@ def perform_page_load(page, cache_warming=0):
     else:
         insert_performance(page, {k: 0 for k in measurement_elements}, timestamp, cache_warming=cache_warming,
                            error=performance_metrics['error'])
+    driver.quit()
 
 
 def create_measurements_table():
