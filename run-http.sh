@@ -50,6 +50,17 @@ function osnd_http_client_start() {
 
 }
 
+# osnd_http_client_stop()
+# Stop HTTP Client (Chromium)
+function osnd_http_client_stop() {
+	log I "Stopping chromium script"
+
+	sudo pkill -f chromedriver
+	sudo pkill -f chromium-browser
+
+	sleep $CMD_SHUTDOWN_WAIT
+}
+
 # osnd_measure_tcp_timing(scenario_config_name, output_dir, pep=false, run_cnt=12)
 # Run HTTP timing measurements on the emulation environment
 function osnd_measure_http() {
@@ -107,6 +118,7 @@ function osnd_measure_http() {
 			fi
 		fi
 		_osnd_http_server_stop
+		osnd_http_client_stop
 		osnd_teardown
 
 
