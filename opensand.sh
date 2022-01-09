@@ -574,8 +574,8 @@ Scenario configuration:
   -C <SGTC,> csl of congestion control algorithms to measure (c = cubic, r = reno) (default: r)
   -D #       dump the first # packets of a measurement
   -E <GT,>   csl of two delay values: each one value or multiple seconds-delay values (default: 125)
-  -H         disable http measurements
   -F <#,>*   QUIC-specific: csl of three values: max. ACK Delay, packet no. after which first ack frequency packet is sent, fraction of CWND to be used in ACK frequency frame (default: 25, 1000, 8)
+  -H         disable http measurements
   -I <#,>*   csl of four initial window sizes for SGTC (default: 10)
   -l <#,>    QUIC-specific: csl of two file paths for qlog file output: client, server (default: server.qlog und client.qlog in output directory) 
   -L <#,>    percentages of packets to be dropped (default: 0%)
