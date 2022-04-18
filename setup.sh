@@ -6,8 +6,8 @@ function _osnd_orbit_ground_delay() {
 
 	case "$orbit" in
 	"GEO") echo 40 ;;
-	"MEO") echo 60 ;;
-	"LEO") echo 80 ;;
+	"MEO") echo 40 ;;
+	"LEO") echo 40 ;;
 	*) echo 0 ;;
 	esac
 }
