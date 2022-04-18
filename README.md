@@ -102,15 +102,8 @@ and cleanup the environment.
 
 ### Scenario configuration
 
-These parameters configure the scenarios that are executed. All combinations of
-all configured values are executed. Environment parameters (Type E) control the
-circumstance in which the measurements are performed. Transport parameters (Type T)
-affect the protocols that are measured. The combination of values for E and T parameters
-create a scenario. Measurement parameters (Type M) apply to all scenarios.
-
-E.g. if orbits `-O GEO,MEO` (Type E), congestion controls `-C rrrr,cccc` (Type T)
-and goodput measurements `-N 5` (Type M) are configured, four different scenarios are
-executed, each being measured 5 times.
+These parameters configure the scenarios that are executed. All combinations of all configured values are executed. Please see ```Scenario file format``` and ```Example file``` for a more fine-grained control over the individual
+scenarios and example configurations.
 
 | Name | Argument   | Description | Default | Type |
 | ---- | ---------- | --- | --- | --- |
@@ -142,10 +135,7 @@ file in the emulations temporary directory (`/tmp/opensand.*/`).
 ## Scenario file format
 
 The scenario file allows a much more fine-grained control over the individual
-scenarios that are executed. While in the example for the command line arguments
-all four combinations of orbits and congestion control algorithms form the four
-scenarios, the scenario file allows executing only some of them.
-
+scenarios that are executed.
 Each line in the file describes a single scenario. Blank lines and lines starting
 with `#` are ignored. For each scenario the exact same arguments and syntax are
 used as for the scenario configuration command line arguments with the exception,
