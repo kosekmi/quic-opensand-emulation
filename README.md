@@ -23,7 +23,7 @@ the runs aim to measure the following set of performance values:
 * Connection Establishment Time
 * Time to First Byte
 
-For evaluation of the result you can use these scripts: [quic-opensand-evaluation](https://github.com/moonlight200/quic-opensand-evaluation)
+For evaluation of the result you can use these scripts: [quic-opensand-evaluation](https://github.com/kosekmi/quic-opensand-evaluation)
 
 ### Script structure
 
@@ -48,7 +48,7 @@ also be executed individually for e.g. manual measurements.
 
 These programs need to be cloned and built
 
-* [qperf](https://gitlab.lrz.de/kosekmike/qperf)
+* [qperf](https://github.com/kosekmi/qperf)
 * [pepsal](https://github.com/danielinux/pepsal)
 
 The following utilities need to be installed on the system:
