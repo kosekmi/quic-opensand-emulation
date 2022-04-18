@@ -153,7 +153,7 @@ lists must only have a single value.
 -N 100 -T 10 -P 5 -A 0 -B 4M,4M -Q 4M,4M,4M,4M -U 4M,4M,4M,4M -l client.qlog,server.qlog -O LEO -E 8,8 -C -V crrc -L 0.1 -I 10,100,100,10
 ```
 
-This file describes 2 different scenarios. Both scenarios perform 100 iterations of goodput and http measurements (```-N 100```), and 1 iteration of timing measurements (```-T 10```). The environments are primed for 5 seconds (```-P 5```), and the attenuation is configured with 0db (```-A 0```). All Buffers are identically sized in both scenarios with 4MB, and are also identical for the different buffer types (```-B 4M,4M -Q 4M,4M,4M,4M -U 4M,4M,4M,4M```). The client and server qlogs are output to the files client.qlog and server.qlog (```-l client.qlog,server.qlog(```)
+This file describes 2 different scenarios. Both scenarios perform 100 iterations of goodput and http measurements (```-N 100```), and 10 iterations of timing measurements (```-T 10```). The environments are primed for 5 seconds (```-P 5```), and the attenuation is configured with 0db (```-A 0```). All Buffers are identically sized in both scenarios with 4MB, and are also identical for the different buffer types (```-B 4M,4M -Q 4M,4M,4M,4M -U 4M,4M,4M,4M```). The client and server qlogs are output to the files client.qlog and server.qlog (```-l client.qlog,server.qlog(```)
 
 The first scenario uses a GEO satellite orbit (```-O GEO```) with a one-way delay of 250ms (```-E 125,125```), disables PEP measurements (```-W```), and uses cubic as congestion control on server, gateway, terminal, and client (```-C cccc```). Moreover, the loss is configured to 0% (```-L 0```), and the initial window set to 10 on server, gateway, terminal, and client (```-I 10,10,10,10```)
 
