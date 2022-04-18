@@ -7,8 +7,8 @@
 # qperf binary
 QPERF_BIN="$HOME/qperf/build-qperf/qperf"
 # Certificate and key used by qperf
-QPERF_CRT="$HOME/server.crt"
-QPERF_KEY="$HOME/server.key"
+QPERF_CRT="$HOME/h2o_config/h2o/server-example.crt"
+QPERF_KEY="$HOME/h2o_config/h2o/server-example.key"
 # pepsal binary
 PEPSAL_BIN="$HOME/pepsal/src/pepsal"
 # iperf3 binary
