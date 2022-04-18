@@ -22,6 +22,7 @@ the runs aim to measure the following set of performance values:
 * Congestion Window Evolution
 * Connection Establishment Time
 * Time to First Byte
+* Web Performance Metrics (e.g., Response Start, First Contentful Paint, Page Load Time) for HTTP/1.1 and HTTP/3
 
 For evaluation of the result you can use these scripts: [quic-opensand-evaluation](https://github.com/kosekmi/quic-opensand-evaluation)
 
@@ -58,9 +59,14 @@ The following utilities need to be installed on the system:
 * iperf3
 * tmux
 * curl
-* nginx (deamon can be disabled, is only used standalone)
+* nginx (deamon can be disabled, it is used standalone)
 * iproute2
 * xmlstarlet
+
+In addition, the following utilities are required for the Web Performance Measurements: 
+* chromium
+* selenium
+* h2o Web Server
 
 # Usage
 
@@ -114,16 +120,16 @@ executed, each being measured 5 times.
 | `-D` | `#`        | dump the first # packets of a measurement | | M |
 | `-E` | `<GT,>`    | csl of two delay values: each one value or multiple seconds-delay values | `125` | M |
 | `-F` | `<#,>*`    | `QUIC-specific:` csl of three values: max. ACK Delay, packet no. after which first ack frequency packet is sent, fraction of CWND to be used in ACK frequency frame | `25, 1000, 8` | T |
-| `-H` |            | Disable http measurements | | M |
 | `-I` | `<#,>*`    | csl of four initial window sizes for SGTC | `10` | T |
 | `-l` | `<#,>`     | `QUIC-specific:` csl of two file paths for qlog file output: client, server | `server.qlog und client.qlog in output directory` | T |
 | `-L` | `<#,>`     | percentages of packets to be dropped | `0` | M |
-| `-N` | `#`        | Number of runs per goodput measurement in a scenario | `1` | M |
+| `-T` | `#`        | Number of runs per timing measurement in a scenario | `4` | M |
+| `-N` | `#`        | Number of runs per goodput and HTTP measurement in a scenario | `1` | M |
 | `-O` | `<#,>`     | Comma separated list of orbits to measure (GEO,MEO,LEO) | `GEO` | E |
 | `-P` | `#`        | Number of seconds to prime a new environment with some pings | `5` | M |
 | `-Q` | `<SGTC,>*` | `QUIC-specific:` Comma separated list of four qperf quicly buffer sizes at server, gateway, terminal and client. Repeat parameter for multiple configurations | `1M,1M,1M,1M` | T |
-| `-T` | `#`        | Number of runs per timing measurement in a scenario | `4` | M |
 | `-U` | `<SGTC,>*` | `QUIC-specific:` Comma separated list of four qperf udp buffer sizes at server, gateway, terminal and client. Repeat parameter for multiple configurations | `1M,1M,1M,1M` | T |
+| `-H` |            | Disable http measurements | | M |
 | `-V` |            | Disable plain (non pep) measurements | | M |
 | `-W` |            | Disable pep measurements | | M |
 | `-X` |            | Disable ping measurements | | M |
@@ -152,10 +158,13 @@ lists must only have a single value.
 ```
 # Example scenario configuration
 
--N 5 -O GEO -C rrrr -Q 1M,2M,3M,4M
--N 3 -O MEO -C cccc -Q 1M,2M,3M,4M
--O GEO -C cccc -Q 1M,2M,3M,4M
+-N 100 -T 10 -P 5 -A 0 -B 4M,4M -Q 4M,4M,4M,4M -U 4M,4M,4M,4M -l client.qlog,server.qlog -O GEO -E 125,125 -W -C cccc -L 0 -I 10,10,10,10
+
+-N 100 -T 10 -P 5 -A 0 -B 4M,4M -Q 4M,4M,4M,4M -U 4M,4M,4M,4M -l client.qlog,server.qlog -O LEO -E 8,8 -C -V crrc -L 0.1 -I 10,100,100,10
 ```
-This file describes three scenarios with varying orbits, congestion control algorithms
-and goodput measurement runs. All parameters that are not given use the default value,
-thus the last scenario would be executed with one run per goodput measurement.
+
+This file describes 2 different scenarios. Both scenarios perform 100 iterations of goodput and http measurements (```-N 100```), and 1 iteration of timing measurements (```-T 10```). The environments are primed for 5 seconds (```-P 5```), and the attenuation is configured with 0db (```-A 0```). All Buffers are identically sized in both scenarios with 4MB, and are also identical for the different buffer types (```-B 4M,4M -Q 4M,4M,4M,4M -U 4M,4M,4M,4M```). The client and server qlogs are output to the files client.qlog and server.qlog (```-l client.qlog,server.qlog(```)
+
+The first scenario uses a GEO satellite orbit (```-O GEO```) with a one-way delay of 250ms (```-E 125,125```), disables PEP measurements (```-W```), and uses cubic as congestion control on server, gateway, terminal, and client (```-C cccc```). Moreover, the loss is configured to 0% (```-L 0```), and the initial window set to 10 on server, gateway, terminal, and client (```-I 10,10,10,10```)
+
+The second scenario uses a LEO satellite orbit (```-O LEO```) with a one-way delay of 16ms (```-E 8,8```), disables Non-PEP measurements (```-V```), and uses cubic as congestion control on server and client, as well as reno on gateway and terminal (```-C crrc```). Moreover, the loss is configured to 0.1% (```-L 0.1```), and the initial window set to 10 on server and client, as well as 100 on gateway and terminal (```-I 10,100,100,10```).
