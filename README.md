@@ -55,7 +55,7 @@ These programs need to be cloned and built
 The following utilities need to be installed on the system:
 
 * [opensand](https://opensand.org/content/get.php) (which installs `opensand-core`, `opensand-network` and `opensand-daemon`)  
-  Not required are `opensand-collector` and `opensand-manager`
+  Not required are `opensand-collector` and `opensand-manager`. We advise to use `OpenSAND Version 5.2.0`, which has been verified for the Opensand Measurement Testbed
 * iperf3
 * tmux
 * curl
