@@ -76,7 +76,10 @@ will take some time, it is recommended to start the script in a tmux session.
 tmux new-session
 ./opensand.sh
 ```
-This allows to detach from the process and re-attach at any later time.
+This allows to detach from the process and re-attach at any later time. For a rough estimation of emulation execution time, the following values can be considered for a typical GEO orbit with 250ms one-way delay:
+* ~2 Minutes for 1 iteration of timing measurements for QUIC and TCP, both PEP and Non-PEP
+* ~5 Minutes for 1 iteration of goodput measurements for QUIC and TCP, both PEP and Non-PEP
+* ~4 Minutes for 1 iteration of http measurements for QUIC and TCP, both PEP and Non-PEP
 
 The results of an emulation can be found in a subdirectory of the configured
 `RESULTS_DIR` (set in `env.sh`), along with the emulation log file. To simplify
