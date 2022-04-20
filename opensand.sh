@@ -573,7 +573,7 @@ Scenario configuration:
   -B <#,>*   QUIC-specific: csl of two qperf transfer buffer sizes for G and T (default: 1M)
   -C <SGTC,> csl of congestion control algorithms to measure (c = cubic, r = reno) (default: r)
   -D #       dump the first # packets of a measurement
-  -E <GT,>   csl of two delay values: each one value or multiple seconds-delay values (default: 125)
+  -E <GT,>   csl of two delay values in ms, one value each per direction. Alternatively, a file can be stated which contains multiple second:delay pairs in the form of "second value", i.e., "0 15" per line to emulate changing delays over time (default: 125)
   -F <#,>*   QUIC-specific: csl of three values: max. ACK Delay, packet no. after which first ack frequency packet is sent, fraction of CWND to be used in ACK frequency frame (default: 25, 1000, 8)
   -H         disable http measurements
   -I <#,>*   csl of four initial window sizes for SGTC (default: 10)
