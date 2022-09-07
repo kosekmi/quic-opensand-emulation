@@ -10,27 +10,27 @@ function _osnd_configure_opensand_delay() {
 		local delayName="delay_${entity}"
 		local delay="${!delayName}"
 		if ! [[ "${delay}" =~ ^[0-9]+$ ]]; then
-            xmlstarlet edit -L \
-                --update "/configuration/common/global_constant_delay" --value "false" \
-                "${OSND_TMP}/config_${entity}/core_global.conf"
+			xmlstarlet edit -L \
+				--update "/configuration/common/global_constant_delay" --value "false" \
+				"${OSND_TMP}/config_${entity}/core_global.conf"
 
-            xmlstarlet edit -L \
-                --update "/configuration/delay/delay_type" --value "FileDelay" \
-                "${OSND_TMP}/config_${entity}/core.conf"
+			xmlstarlet edit -L \
+				--update "/configuration/delay/delay_type" --value "FileDelay" \
+				"${OSND_TMP}/config_${entity}/core.conf"
 
-            xmlstarlet edit -L \
-                --update "/configuration/delay_conf/path" --value "${OSND_TMP}/config_${entity}/plugins/satdelay.csv" \
-                "${OSND_TMP}/config_${entity}/plugins/file_delay.conf"
-        else
-            xmlstarlet edit -L \
-                --update "/configuration/common/global_constant_delay" --value "false" \
-                --update "/configuration/delay/delay_type" --value "ConstantDelay" \
-                "${OSND_TMP}/config_${entity}/core_global.conf"
+			xmlstarlet edit -L \
+				--update "/configuration/delay_conf/path" --value "${OSND_TMP}/config_${entity}/plugins/satdelay.csv" \
+				"${OSND_TMP}/config_${entity}/plugins/file_delay.conf"
+		else
+			xmlstarlet edit -L \
+				--update "/configuration/common/global_constant_delay" --value "false" \
+				--update "/configuration/delay/delay_type" --value "ConstantDelay" \
+				"${OSND_TMP}/config_${entity}/core_global.conf"
 
-            xmlstarlet edit -L \
-                --update "/configuration/delay_conf/delay" --value "${delay}" \
-                "${OSND_TMP}/config_${entity}/plugins/constant_delay.conf"
-        fi
+			xmlstarlet edit -L \
+				--update "/configuration/delay_conf/delay" --value "${delay}" \
+				"${OSND_TMP}/config_${entity}/plugins/constant_delay.conf"
+		fi
 	done
 }
 
