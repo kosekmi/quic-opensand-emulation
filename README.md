@@ -116,7 +116,7 @@ the individual scenarios and example configurations.
 | `-B` | `<GT,>*`   | `QUIC-specific:` Comma separated list of two qperf transfer buffer sizes for gateway and terminal. Repeat the parameter for multiple configurations | `1M,1M` | T |
 | `-C` | `<SGTC,>`  | Comma separated list of four congestion control algorithms for server, gateway, terminal and client. (c = cubic, r = reno) | `rrrr` | T |
 | `-D` | `#`        | dump the first # packets of a measurement | | M |
-| `-E` | `<GT,>`    | csl of two delay values in ms, one value each per direction. Alternatively, a file can be stated which contains multiple second:delay pairs in the form of `second value`, i.e., `0 15` per line to emulate changing delays over time | `125` | M |
+| `-E` | `<GT,>`    | csl of two delay values in ms, one value each per direction. Alternatively, a file can be stated which contains multiple second:delay pairs in the form of `second value`, i.e., `0 15` per line to emulate changing delays over time located in the config folder for each OpenSAND entity and labeled `satdelay.csv` | `125,125` or `FILE,FILE` | M |
 | `-F` | `<#,>*`    | `QUIC-specific:` csl of three values: max. ACK Delay, packet no. after which first ack frequency packet is sent, fraction of CWND to be used in ACK frequency frame | `25, 1000, 8` | T |
 | `-I` | `<#,>*`    | csl of four initial window sizes for SGTC | `10` | T |
 | `-l` | `<#,>`     | `QUIC-specific:` csl of two file paths for the qlog file output: client, server | `server.qlog und client.qlog in output directory` | T |

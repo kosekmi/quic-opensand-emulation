@@ -698,30 +698,6 @@ function _osnd_parse_args() {
 			if [[ "${#delay_values[@]}" != 2 ]]; then
 				echo "Need exactly two delay values, ${#delay_values[@]} given in '${delay_values[@]}'"
 				exit 1
-			else
-				for delay in "${delay_values[@]}"; do
-					IFS=';' read -ra procDelays <<< "${delay}"
-					if [[ "${#procDelays[@]}" == 1 ]]; then
-						if ! [[ "${procDelays[0]}" =~ ^[0-9]+$ ]]; then
-							echo "Invalid integer value for -E"
-							exit 1
-						fi
-					else
-						for delayFileLine in "${procDelays[@]}"; do
-							IFS='-' read -ra procDelayFileLine <<< "${delayFileLine}"
-							if [[ "${#procDelayFileLine[@]}" != 2 ]]; then
-								echo "Invalid integer value for -E"
-								exit 1
-							fi
-							for procDelayFileLine in "${procDelayFileLine[@]}"; do
-								if ! [[ "${procDelayFileLine}" =~ ^[0-9]+$ ]]; then
-									echo "Invalid integer value for -E"
-									exit 1
-								fi
-							done
-						done
-					fi
-				done
 			fi
 			new_delays+=("$OPTARG")
 			;;

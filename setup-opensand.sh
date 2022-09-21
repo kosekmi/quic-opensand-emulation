@@ -9,51 +9,27 @@ function _osnd_configure_opensand_delay() {
 	for entity in gw st; do
 		local delayName="delay_${entity}"
 		local delay="${!delayName}"
-		local -a procDelays=()
+		if ! [[ "${delay}" =~ ^[0-9]+$ ]]; then
+			xmlstarlet edit -L \
+				--update "/configuration/common/global_constant_delay" --value "false" \
+				"${OSND_TMP}/config_${entity}/core_global.conf"
 
-		#Read
-		IFS=';' read -ra procDelays <<< "${!delayName}"
+			xmlstarlet edit -L \
+				--update "/configuration/delay/delay_type" --value "FileDelay" \
+				"${OSND_TMP}/config_${entity}/core.conf"
 
-		if [ ! "${#procDelays[@]}" -lt 1 ]; then
-			if [ "${#procDelays[@]}" -le 1 ]; then
-				local -a firstLine=()
-				IFS='-' read -ra firstLine <<< "${procDelays[0]}"
-				firstLineLength=$(echo ${#firstLine[@]})
+			xmlstarlet edit -L \
+				--update "/configuration/delay_conf/path" --value "${OSND_TMP}/config_${entity}/plugins/satdelay.csv" \
+				"${OSND_TMP}/config_${entity}/plugins/file_delay.conf"
+		else
+			xmlstarlet edit -L \
+				--update "/configuration/common/global_constant_delay" --value "false" \
+				--update "/configuration/delay/delay_type" --value "ConstantDelay" \
+				"${OSND_TMP}/config_${entity}/core_global.conf"
 
-				if [ "${firstLineLength}" -le 1 ]; then
-					xmlstarlet edit -L \
-						--update "/configuration/common/global_constant_delay" --value "false" \
-						--update "/configuration/delay/delay_type" --value "ConstantDelay" \
-						"${OSND_TMP}/config_${entity}/core_global.conf"
-
-					xmlstarlet edit -L \
-						--update "/configuration/delay_conf/delay" --value "${delay}" \
-						"${OSND_TMP}/config_${entity}/plugins/constant_delay.conf"
-				fi
-			else
-
-				xmlstarlet edit -L \
-					--update "/configuration/common/global_constant_delay" --value "false" \
-					"${OSND_TMP}/config_${entity}/core_global.conf"
-					
-				xmlstarlet edit -L \
-					--update "/configuration/delay/delay_type" --value "FileDelay" \
-					"${OSND_TMP}/config_${entity}/core.conf"
-
-				xmlstarlet edit -L \
-					--update "/configuration/delay_conf/path" --value "${OSND_TMP}/config_${entity}/plugins/satdelay.csv" \
-					"${OSND_TMP}/config_${entity}/plugins/file_delay.conf"
-
-				# Clear sat delay
-				> "${OSND_TMP}/config_${entity}/plugins/satdelay.csv"
-
-				# Put proccessed delays in csv file
-				for i in "${procDelays[@]}"; do
-					local -a procDelayFileLine=()
-					IFS='-' read -ra procDelayFileLine <<< "${i}"
-					echo -e "${procDelayFileLine[0]} ${procDelayFileLine[1]}" >> "${OSND_TMP}/config_${entity}/plugins/satdelay.csv"
-				done
-			fi
+			xmlstarlet edit -L \
+				--update "/configuration/delay_conf/delay" --value "${delay}" \
+				"${OSND_TMP}/config_${entity}/plugins/constant_delay.conf"
 		fi
 	done
 }
